@@ -1,0 +1,2 @@
+# FinADR
+finance tracking app
