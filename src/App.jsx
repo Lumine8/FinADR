@@ -10,7 +10,7 @@ import {
 } from 'firebase/auth';
 import { 
     getFirestore, collection, addDoc, onSnapshot, query, doc, updateDoc, 
-    deleteDoc, setLogLevel, where, arrayUnion, setDoc, documentId, getDocs
+    deleteDoc, setLogLevel, where, arrayUnion, setDoc, documentId, getDocs, writeBatch
 } from 'firebase/firestore';
 import { 
     getStorage, ref, uploadBytes, getDownloadURL 
@@ -21,13 +21,13 @@ import Logo from './assets/logo.png';
 import './App.css';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyA8vuFRowcXFzk3_SaLcUk3qn4clhvz0VU",
-  authDomain: "finadr-c216d.firebaseapp.com",
-  projectId: "finadr-c216d",
-  storageBucket: "finadr-c216d.appspot.com",
-  messagingSenderId: "608681523529",
-  appId: "1:608681523529:web:8f3bed536feada05224298",
-  measurementId: "G-S27XRWCX2M"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
 // --- SVG Icons (using class for styling now) ---
@@ -40,6 +40,9 @@ const UserIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="icon" 
 const UsersIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>;
 const CloseIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>;
 const CameraIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+const SplitIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="icon-sm" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>;
+const CollectionIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2H5a2 2 0 00-2 2v2m14 0h-2m-2 0h2" /></svg>;
+
 
 // --- Welcome Screen Component ---
 const WelcomeScreen = ({ onNavigate }) => (
@@ -303,7 +306,8 @@ const CollaboratorsModal = ({ db, pools, userId, onClose }) => {
 
 
 // --- Pools Modal ---
-const PoolsModal = ({ db, userId, pools, onClose }) => {
+const PoolsModal = ({ db, user, pools, onClose }) => {
+    const userId = user.uid;
     const [poolName, setPoolName] = useState('');
     const [joinId, setJoinId] = useState('');
     const [error, setError] = useState('');
@@ -331,6 +335,10 @@ const PoolsModal = ({ db, userId, pools, onClose }) => {
                     };
                 });
                 
+                if (!userMap[userId]) {
+                    userMap[userId] = { displayName: user.displayName, photoURL: user.photoURL };
+                }
+
                 const details = {};
                 pools.forEach(pool => {
                     details[pool.id] = pool.members.map(uid => userMap[uid] || { displayName: `User...${uid.slice(-4)}`, photoURL: '' });
@@ -343,7 +351,7 @@ const PoolsModal = ({ db, userId, pools, onClose }) => {
         };
 
         fetchMemberNames();
-    }, [pools, db]);
+    }, [pools, db, user, userId]);
 
 
     const handleCreatePool = async () => {
@@ -524,24 +532,72 @@ const MainApp = ({ db, user, auth, storage }) => {
   const [isSuggesting, setIsSuggesting] = useState(false);
   const appId = "1:608681523529:web:8f3bed536feada05224298";
 
+  // State for bill splitting
+  const [isSplitting, setIsSplitting] = useState(false);
+  const [splitMembers, setSplitMembers] = useState([]);
+  const [poolMembers, setPoolMembers] = useState([]);
+
+  // Fetch user's pools
   useEffect(() => {
     if (!db || !userId) return;
     const poolsRef = collection(db, `artifacts/${appId}/public/data/pools`);
     const qPools = query(poolsRef, where("members", "array-contains", userId));
-    const unsubPools = onSnapshot(qPools, (snapshot) => setPools(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))));
+    const unsubscribe = onSnapshot(qPools, (snapshot) => {
+        setPools(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+    return () => unsubscribe();
+  }, [db, userId]);
+
+  // Fetch expenses for the selected pool/context
+  useEffect(() => {
+    if (!db || !userId) return;
+    
     let expensesRef = currentPoolId === 'personal'
       ? collection(db, `artifacts/${appId}/users/${userId}/expenses`)
       : collection(db, `artifacts/${appId}/public/data/pools/${currentPoolId}/expenses`);
+      
     const qExpenses = query(expensesRef);
-    const unsubExpenses = onSnapshot(qExpenses, (snapshot) => {
+    const unsubscribe = onSnapshot(qExpenses, (snapshot) => {
         const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).sort((a, b) => new Date(b.date) - new Date(a.date));
         setExpenses(data);
-    }, (err) => { console.error(err); setError("Failed to load expenses."); });
-    return () => { unsubPools(); unsubExpenses(); };
+    }, (err) => { 
+        console.error("Error fetching expenses: ", err); 
+        setError("Failed to load expenses."); 
+    });
+    
+    return () => unsubscribe();
   }, [db, userId, currentPoolId]);
+
+  // Fetch members of the current pool (for splitting)
+  useEffect(() => {
+    const fetchPoolMembers = async () => {
+        if (currentPoolId === 'personal') {
+            setPoolMembers([]);
+            return;
+        }
+
+        const currentPool = pools.find(p => p.id === currentPoolId);
+        if (currentPool && currentPool.members) {
+            try {
+                const usersRef = collection(db, `artifacts/${appId}/public/data/users`);
+                const q = query(usersRef, where(documentId(), 'in', currentPool.members));
+                const userDocs = await getDocs(q);
+                const members = userDocs.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                setPoolMembers(members);
+                setSplitMembers([userId]); // Reset split members to just self when pool changes
+            } catch (err) {
+                console.error("Error fetching pool members:", err);
+            }
+        }
+    };
+    
+    if(db && userId && pools.length > 0) {
+        fetchPoolMembers();
+    }
+  }, [db, userId, currentPoolId, pools]);
   
     const callGeminiAPI = async (systemPrompt, userPrompt) => {
-        const apiKey = "AIzaSyCwtByuVgaQUXilyEEFMxaXOpkId5w7Xok"; const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+        const apiKey = import.meta.env.VITE_GEMINI_API_KEY; const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
         const payload = { contents: [{ parts: [{ text: userPrompt }] }], systemInstruction: { parts: [{ text: systemPrompt }] } };
         try {
             const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
@@ -583,15 +639,64 @@ const MainApp = ({ db, user, auth, storage }) => {
         setIsSuggesting(false);
     };
 
-  const validateForm = () => { if (!title.trim() || amount <= 0 || !date) { setError('Please fill all fields with valid data.'); return false; } setError(''); return true; };
+  const validateForm = () => { 
+      const amountToValidate = parseFloat(amount);
+      if (!title.trim() || isNaN(amountToValidate) || amountToValidate <= 0 || !date) { 
+          setError('Please fill all fields with valid data.'); 
+          return false; 
+      }
+      if (isSplitting && splitMembers.length < 2) {
+          setError('Please select at least two members to split the bill.');
+          return false;
+      }
+      setError(''); 
+      return true; 
+  };
+
+  const handleSplitMemberToggle = (memberId) => {
+    setSplitMembers(prev => 
+        prev.includes(memberId) 
+            ? prev.filter(id => id !== memberId) 
+            : [...prev, memberId]
+    );
+  };
 
   const handleSubmit = async (e) => {
-    e.preventDefault(); if (!validateForm() || !db || !userId) return;
-    const expenseData = { title: title.trim(), amount: parseFloat(amount), category, date, authorId: userId, authorName: user.displayName || user.email };
-    let collectionPath = currentPoolId === 'personal' ? `artifacts/${appId}/users/${userId}/expenses` : `artifacts/${appId}/public/data/pools/${currentPoolId}/expenses`;
+    e.preventDefault(); if (!validateForm() || !db || !user) return;
+    
+    const collectionPath = currentPoolId === 'personal' ? `artifacts/${appId}/users/${userId}/expenses` : `artifacts/${appId}/public/data/pools/${currentPoolId}/expenses`;
+
     try {
-      if (editingId) { await updateDoc(doc(db, collectionPath, editingId), expenseData); } 
-      else { await addDoc(collection(db, collectionPath), expenseData); }
+        if (isSplitting && currentPoolId !== 'personal') {
+            const batch = writeBatch(db);
+            const totalAmount = parseFloat(amount);
+            const amountPerPerson = totalAmount / splitMembers.length;
+            const splitGroupId = Date.now().toString();
+
+            splitMembers.forEach(memberId => {
+                const memberData = poolMembers.find(m => m.id === memberId);
+                const newExpenseRef = doc(collection(db, collectionPath));
+                batch.set(newExpenseRef, {
+                    title: `${title.trim()} (Split)`,
+                    amount: amountPerPerson,
+                    category,
+                    date,
+                    authorId: memberId, 
+                    authorName: memberData?.displayName || `User...${memberId.slice(-4)}`,
+                    paidById: userId,
+                    paidByName: user.displayName || user.email,
+                    splitGroupId
+                });
+            });
+            await batch.commit();
+        } else {
+             const expenseData = { title: title.trim(), amount: parseFloat(amount), category, date, authorId: userId, authorName: user.displayName || user.email };
+             if (editingId) { 
+                 await updateDoc(doc(db, collectionPath, editingId), expenseData); 
+             } else { 
+                 await addDoc(collection(db, collectionPath), expenseData); 
+             }
+        }
       resetForm();
     } catch (err) { 
         console.error("Error saving expense:", err);
@@ -619,8 +724,21 @@ const MainApp = ({ db, user, auth, storage }) => {
     }
   };
 
-  const handleEdit = (expense) => { setEditingId(expense.id); setTitle(expense.title); setAmount(expense.amount); setCategory(expense.category); setDate(expense.date.slice(0, 16)); setShowForm(true); window.scrollTo(0, 0); };
-  const resetForm = () => { setTitle(''); setAmount(''); setCategory('Food'); setDate(new Date().toISOString().slice(0, 16)); setEditingId(null); setShowForm(false); setError(''); };
+  const handleEdit = (expense) => { 
+      if (expense.splitGroupId) {
+          setError("Splitting bills cannot be edited. Please delete and create a new one.");
+          setTimeout(() => setError(''), 3000);
+          return;
+      }
+      setEditingId(expense.id); 
+      setTitle(expense.title); 
+      setAmount(expense.amount); 
+      setCategory(expense.category); 
+      setDate(expense.date.slice(0, 16)); 
+      setShowForm(true); 
+      window.scrollTo(0, 0); 
+  };
+  const resetForm = () => { setTitle(''); setAmount(''); setCategory('Food'); setDate(new Date().toISOString().slice(0, 16)); setEditingId(null); setShowForm(false); setError(''); setIsSplitting(false); setSplitMembers([]); };
   const toggleForm = () => showForm ? resetForm() : setShowForm(true);
   const totalExpenses = useMemo(() => expenses.reduce((acc, exp) => acc + exp.amount, 0), [expenses]);
   const expensesByCategory = useMemo(() => {
@@ -640,7 +758,7 @@ const MainApp = ({ db, user, auth, storage }) => {
   return (
     <>
       {showProfile && <ProfileModal auth={auth} db={db} storage={storage} onClose={() => setShowProfile(false)} />}
-      {showPools && <PoolsModal db={db} userId={userId} pools={pools} onClose={() => setShowPools(false)} />}
+      {showPools && <PoolsModal db={db} user={user} pools={pools} onClose={() => setShowPools(false)} />}
       {showCollaborators && <CollaboratorsModal db={db} userId={userId} pools={pools} onClose={() => setShowCollaborators(false)} />}
 
       <div id="main-app">
@@ -655,6 +773,7 @@ const MainApp = ({ db, user, auth, storage }) => {
                       <button onClick={() => setShowProfile(true)} className="btn-icon" title="Profile">
                         {user.photoURL ? <img src={user.photoURL} alt="My Profile" className="header-pfp" /> : <UserIcon />}
                       </button>
+                      <button onClick={() => setShowPools(true)} className="btn-icon" title="Manage Pools"><CollectionIcon /></button>
                       <button onClick={() => setShowCollaborators(true)} className="btn-icon" title="Collaborators"><UsersIcon/></button>
                       <button onClick={() => signOut(auth)} className="btn-icon" title="Logout"><LogoutIcon /></button>
                   </div>
@@ -681,8 +800,36 @@ const MainApp = ({ db, user, auth, storage }) => {
                   </select>
                   <button type="button" onClick={handleSuggestCategory} disabled={isSuggesting || !title} className="btn-suggest">{isSuggesting ? '...' : <><SparklesIcon /> Suggest</>}</button>
                 </div>
-                <input type="number" placeholder="Amount" value={amount} onChange={(e) => setAmount(e.target.value)} required min="0.01" step="0.01" />
+                <input type="number" placeholder={isSplitting ? "Total Amount to Split" : "Amount"} value={amount} onChange={(e) => setAmount(e.target.value)} required min="0.01" step="0.01" />
                 <input type="datetime-local" value={date} onChange={(e) => setDate(e.target.value)} required />
+                
+                {currentPoolId !== 'personal' && !editingId && (
+                    <button type="button" onClick={() => setIsSplitting(!isSplitting)} className={`btn-secondary full-width ${isSplitting ? 'active' : ''}`}>
+                       <SplitIcon /> {isSplitting ? 'Cancel Split' : 'Split Bill'}
+                    </button>
+                )}
+
+                {isSplitting && (
+                    <div className="split-section">
+                        <h4>Split with:</h4>
+                        <div className="split-members-list">
+                            {poolMembers.map(member => (
+                                <label key={member.id} className="split-member-label">
+                                    <input type="checkbox" checked={splitMembers.includes(member.id)} onChange={() => handleSplitMemberToggle(member.id)} />
+                                     <img src={member.photoURL || `https://placehold.co/24x24/18181b/a1a1aa?text=${member.displayName.charAt(0)}`} alt={member.displayName} />
+                                    {member.displayName}
+                                </label>
+                            ))}
+                        </div>
+                        {splitMembers.length > 0 && amount > 0 && (
+                            <p className="split-result">
+                                Each pays: ₹{(parseFloat(amount) / splitMembers.length).toFixed(2)}
+                            </p>
+                        )}
+                    </div>
+                )}
+
+
                 {error && <p className="error-message centered">{error}</p>}
                 <div className="form-actions">
                   <button type="button" onClick={resetForm} className="btn-secondary">Cancel</button>
@@ -716,6 +863,7 @@ const MainApp = ({ db, user, auth, storage }) => {
                       <p className="expense-title">{expense.title}</p>
                       <p className="expense-meta">{expense.category} - {new Date(expense.date).toLocaleString()}</p>
                       {currentPoolId !== 'personal' && <p className="expense-author">Added by: {expense.authorName}</p>}
+                       {expense.paidByName && <p className="expense-paid-by">Paid by: {expense.paidByName}</p>}
                     </div>
                     <div className="expense-actions">
                       <p className="expense-amount">₹{expense.amount.toFixed(2)}</p>
@@ -756,6 +904,7 @@ const MainApp = ({ db, user, auth, storage }) => {
           .btn-primary.full-width { width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.5rem; }
           .btn-secondary { background-color: #3f3f46; color: #e4e4e7; font-weight: 600; padding: 0.75rem 1rem; border-radius: 0.5rem; }
           .btn-secondary:hover { background-color: #52525b; }
+          .btn-secondary.active { background-color: #166534; color: white; }
           .btn-cta { background-color: #15803d; color: white; font-weight: bold; padding: 0.75rem 2rem; border-radius: 9999px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06); transition: transform 0.2s; }
           .btn-cta:hover { background-color: #166534; transform: scale(1.05); animation: pulse 1.5s infinite; }
           .btn-icon { color: #a1a1aa; padding: 0.25rem; border-radius: 9999px; display: flex; align-items: center; justify-content: center; }
@@ -810,6 +959,16 @@ const MainApp = ({ db, user, auth, storage }) => {
           .form-card form { display: flex; flex-direction: column; gap: 1rem; }
           .form-actions { display: flex; justify-content: flex-end; gap: 0.75rem; }
 
+          /* --- Bill Splitting --- */
+          .split-section { border-top: 1px solid #3f3f46; margin-top: 1rem; padding-top: 1rem; }
+          .split-section h4 { font-weight: 600; margin-bottom: 0.5rem; }
+          .split-members-list { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem; margin-bottom: 1rem; }
+          .split-member-label { display: flex; align-items: center; gap: 0.5rem; background-color: #27272a; padding: 0.5rem; border-radius: 0.5rem; cursor: pointer; }
+          .split-member-label input { width: auto; }
+          .split-member-label img { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; }
+          .split-result { text-align: center; font-weight: 600; color: #22c55e; margin-top: 0.5rem; }
+
+
           /* Summary & Chart */
           .summary-content { display: flex; flex-direction: column; gap: 0.75rem; }
           .summary-total { display: flex; justify-content: space-between; align-items: center; font-size: 1.125rem; }
@@ -833,7 +992,8 @@ const MainApp = ({ db, user, auth, storage }) => {
           .expense-details { flex-grow: 1; }
           .expense-title { font-weight: bold; font-size: 1.125rem; color: #f4f4f5; }
           .expense-meta { font-size: 0.875rem; color: #a1a1aa; }
-          .expense-author { font-size: 0.75rem; color: #4ade80; padding-top: 0.25rem; }
+          .expense-author { font-size: 0.75rem; color: #a1a1aa; padding-top: 0.25rem; }
+          .expense-paid-by { font-size: 0.75rem; color: #6ee7b7; padding-top: 0.25rem; font-style: italic; }
           .expense-actions { display: flex; align-items: center; gap: 0.75rem; }
           .expense-amount { font-size: 1.125rem; font-weight: 600; color: #f4f4f5; }
 
@@ -934,4 +1094,3 @@ export default function App() {
         return <WelcomeScreen onNavigate={handleNavigate} />;
   }
 }
-
