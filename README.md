@@ -2,7 +2,7 @@
 # FinADR - Your Finance and Life Advisor
 
 <h1 align="center">
-  <img src="./src/assets/fullLogo.png" alt="FinADR Logo" width="600"/>
+  <img src="./src/assets/fullLogo.png" alt="FinADR Logo" width="300"/>
 </h1>
 
 **FinADR (Finance and Life Advisor)** is a modern, intelligent expense tracking application designed to provide users with a seamless way to manage personal finances and collaborate on shared expenses with others. Leveraging powerful AI, FinADR goes beyond simple logging to offer smart insights and suggestions, truly acting as a financial co-pilot.
