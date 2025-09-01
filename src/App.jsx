@@ -10,12 +10,10 @@ import {
 } from 'firebase/auth';
 import { 
     getFirestore, collection, addDoc, onSnapshot, query, doc, updateDoc, 
-    deleteDoc, setLogLevel, where, arrayUnion, setDoc, documentId, getDocs, writeBatch
+    deleteDoc, setLogLevel, where, arrayUnion, setDoc, documentId, getDocs, writeBatch, arrayRemove
 } from 'firebase/firestore';
-import { 
-    getStorage, ref, uploadBytes, getDownloadURL 
-} from 'firebase/storage';
 
+import {getStorage} from 'firebase/storage'
 
 import Logo from './assets/logo.png';
 import './App.css';
@@ -30,6 +28,7 @@ const firebaseConfig = {
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
+
 // --- SVG Icons (using class for styling now) ---
 const PlusIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>;
 const EditIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="icon-sm" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fillRule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clipRule="evenodd" /></svg>;
@@ -39,10 +38,10 @@ const LogoutIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="icon
 const UserIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>;
 const UsersIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>;
 const CloseIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>;
-const CameraIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
 const SplitIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="icon-sm" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>;
 const CollectionIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2H5a2 2 0 00-2 2v2m14 0h-2m-2 0h2" /></svg>;
-
+const BrainIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="feature-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 8h6M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>;
+const ShieldCheckIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="feature-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 20.917l9 2.5a12.02 12.02 0 009-15.417z" /></svg>;
 
 // --- Welcome Screen Component ---
 const WelcomeScreen = ({ onNavigate }) => (
@@ -59,6 +58,7 @@ const WelcomeScreen = ({ onNavigate }) => (
         </nav>
         <div className="hero-section">
             <h1>Take Control of Your Finances</h1>
+            <h2 className="tagline">Your Finance and Life Advisor</h2>
             <p>
                 Track personal expenses, manage shared budgets with friends, and get AI-powered insights to achieve your financial goals.
             </p>
@@ -66,8 +66,39 @@ const WelcomeScreen = ({ onNavigate }) => (
                 Get Started
             </button>
         </div>
+
+        <div className="features-section">
+            <h3 className="section-title">Why Choose FinADR?</h3>
+            <div className="features-grid">
+                <div className="feature-card">
+                    <BrainIcon />
+                    <h4>Smart Tracking</h4>
+                    <p>AI suggestions and automatic timestamps make logging expenses effortless.</p>
+                </div>
+                <div className="feature-card">
+                    <UsersIcon />
+                    <h4>Collaborative Pools</h4>
+                    <p>Share finances with friends or family. Split bills and track group spending easily.</p>
+                </div>
+                <div className="feature-card">
+                    <SparklesIcon />
+                    <h4>AI-Powered Insights</h4>
+                    <p>Visualize your spending with charts and get personalized savings tips from our AI.</p>
+                </div>
+                <div className="feature-card">
+                    <ShieldCheckIcon />
+                    <h4>Secure & Private</h4>
+                    <p>Your financial data is encrypted and protected with industry-standard security.</p>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>&copy; 2025 FinADR. All rights reserved.</p>
+        </footer>
     </div>
 );
+
 
 // --- Auth Screen Component ---
 const AuthScreen = ({ auth, db, initialMode }) => {
@@ -119,9 +150,9 @@ const AuthScreen = ({ auth, db, initialMode }) => {
                 }
 
                 // Update Auth profile and create public Firestore doc
-                await updateProfile(user, { displayName: uniqueUsername, photoURL: '' });
+                await updateProfile(user, { displayName: uniqueUsername });
                 const userProfileRef = doc(db, `artifacts/${appId}/public/data/users`, user.uid);
-                await setDoc(userProfileRef, { displayName: uniqueUsername, photoURL: '' });
+                await setDoc(userProfileRef, { displayName: uniqueUsername });
             }
         } catch (err) {
             setError(err.message.replace('Firebase: ', ''));
@@ -167,91 +198,62 @@ const Modal = ({ children, title, onClose }) => (
 );
 
 // --- Profile Modal ---
-const ProfileModal = ({ auth, db, storage, onClose }) => {
-    const [displayName, setDisplayName] = useState(auth.currentUser.displayName || '');
-    const [photo, setPhoto] = useState(null);
-    const [photoPreview, setPhotoPreview] = useState(auth.currentUser.photoURL);
-    const [uploading, setUploading] = useState(false);
+const ProfileModal = ({ auth, db, onClose }) => {
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
     const appId = "1:608681523529:web:8f3bed536feada05224298";
+    const [newUsername, setNewUsername] = useState(auth.currentUser.displayName || '');
 
-    const handleFileChange = (e) => {
-        if (e.target.files[0]) {
-            setPhoto(e.target.files[0]);
-            setPhotoPreview(URL.createObjectURL(e.target.files[0]));
-        }
-    };
 
     const handleSave = async () => {
         setError('');
         setSuccess('');
-        setUploading(true);
-        const newName = displayName.trim();
-        let newPhotoURL = auth.currentUser.photoURL;
+        const nameToSave = newUsername.trim();
 
-        if (!newName) {
+        if (!nameToSave) {
             setError("Display name cannot be empty.");
-            setUploading(false);
             return;
         }
-
-        if (newName !== auth.currentUser.displayName) {
+        
+        if (nameToSave !== auth.currentUser.displayName) {
             const usersRef = collection(db, `artifacts/${appId}/public/data/users`);
-            const q = query(usersRef, where("displayName", "==", newName));
+            const q = query(usersRef, where("displayName", "==", nameToSave));
             const querySnapshot = await getDocs(q);
             if (!querySnapshot.empty) {
-                setError("This username is already taken.");
-                setUploading(false);
+                setError("This username is already taken. Please choose another one.");
                 return;
             }
         }
         
         try {
-            // Upload photo if a new one was selected
-            if (photo) {
-                const storageRef = ref(storage, `profile_pictures/${auth.currentUser.uid}`);
-                await uploadBytes(storageRef, photo);
-                newPhotoURL = await getDownloadURL(storageRef);
-            }
-
-            // Update Auth and Firestore
-            await updateProfile(auth.currentUser, { displayName: newName, photoURL: newPhotoURL });
+            await updateProfile(auth.currentUser, { displayName: nameToSave });
             const userProfileRef = doc(db, `artifacts/${appId}/public/data/users`, auth.currentUser.uid);
-            await setDoc(userProfileRef, { displayName: newName, photoURL: newPhotoURL }, { merge: true });
+            await setDoc(userProfileRef, { displayName: nameToSave }, { merge: true });
 
-            setSuccess("Profile updated successfully!");
-            setUploading(false);
+            setSuccess("Username updated successfully!");
             setTimeout(() => onClose(), 1500);
         } catch (err) {
             setError(err.message);
-            setUploading(false);
         }
     };
 
     return (
         <Modal title="Edit Profile" onClose={onClose}>
             <div className="profile-modal-body">
-                 <div className="pfp-upload-container">
-                    <label htmlFor="pfp-upload">
-                        <img src={photoPreview || `https://placehold.co/100x100/18181b/a1a1aa?text=${displayName.charAt(0)}`} alt="Profile" className="pfp-preview" />
-                         <div className="pfp-overlay"><CameraIcon /></div>
-                    </label>
-                    <input id="pfp-upload" type="file" accept="image/*" onChange={handleFileChange} style={{ display: 'none' }} />
-                </div>
                 <label>Display Name</label>
-                <input type="text" value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
+                <input type="text" value={newUsername} onChange={(e) => setNewUsername(e.target.value)} />
                 {error && <p className="error-message">{error}</p>}
                 {success && <p className="success-message">{success}</p>}
                 <div className="modal-actions">
-                    <button onClick={handleSave} className="btn-primary" disabled={uploading}>
-                        {uploading ? 'Saving...' : 'Save'}
+                    <button onClick={handleSave} className="btn-primary">
+                        Save Username
                     </button>
                 </div>
             </div>
         </Modal>
     );
 };
+
 
 // --- Collaborators Modal ---
 const CollaboratorsModal = ({ db, pools, userId, onClose }) => {
@@ -291,7 +293,6 @@ const CollaboratorsModal = ({ db, pools, userId, onClose }) => {
                     <ul>
                         {collaborators.map(user => (
                             <li key={user.id}>
-                                <img src={user.photoURL || `https://placehold.co/40x40/18181b/a1a1aa?text=${user.displayName.charAt(0)}`} alt={user.displayName} />
                                 <span>{user.displayName}</span>
                             </li>
                         ))}
@@ -306,7 +307,7 @@ const CollaboratorsModal = ({ db, pools, userId, onClose }) => {
 
 
 // --- Pools Modal ---
-const PoolsModal = ({ db, user, pools, onClose }) => {
+const PoolsModal = ({ db, user, pools, onClose, onPoolLeave }) => {
     const userId = user.uid;
     const [poolName, setPoolName] = useState('');
     const [joinId, setJoinId] = useState('');
@@ -331,17 +332,16 @@ const PoolsModal = ({ db, user, pools, onClose }) => {
                 userDocs.forEach(doc => {
                     userMap[doc.id] = {
                         displayName: doc.data().displayName,
-                        photoURL: doc.data().photoURL
                     };
                 });
                 
                 if (!userMap[userId]) {
-                    userMap[userId] = { displayName: user.displayName, photoURL: user.photoURL };
+                    userMap[userId] = { displayName: user.displayName };
                 }
 
                 const details = {};
                 pools.forEach(pool => {
-                    details[pool.id] = pool.members.map(uid => userMap[uid] || { displayName: `User...${uid.slice(-4)}`, photoURL: '' });
+                    details[pool.id] = pool.members.map(uid => userMap[uid] || { displayName: `User...${uid.slice(-4)}` });
                 });
                 setMemberDetails(details);
 
@@ -378,6 +378,19 @@ const PoolsModal = ({ db, user, pools, onClose }) => {
             setError("Invalid Pool ID or you don't have permission."); 
         }
     };
+    
+    const handleLeavePool = async (poolId) => {
+        setError(''); setSuccess('');
+        try {
+            const poolRef = doc(db, `artifacts/${appId}/public/data/pools`, poolId);
+            await updateDoc(poolRef, { members: arrayRemove(userId) });
+            setSuccess("You have left the pool.");
+            onPoolLeave();
+        } catch (err) {
+             console.error("Leave pool error:", err);
+             setError("Could not leave the pool.");
+        }
+    };
 
     return (
         <Modal title="Manage Expense Pools" onClose={onClose}>
@@ -403,7 +416,10 @@ const PoolsModal = ({ db, user, pools, onClose }) => {
                     {pools.length > 0 ? (
                         <ul> {pools.map(pool => (
                             <li key={pool.id}>
-                                <p className="pool-name">{pool.name}</p>
+                                <div className="pool-header">
+                                    <p className="pool-name">{pool.name}</p>
+                                    <button className="btn-leave-pool" onClick={() => handleLeavePool(pool.id)}>Leave</button>
+                                </div>
                                 <p className="pool-id" onClick={() => navigator.clipboard.writeText(pool.id)}>
                                     ID: {pool.id} (click to copy)
                                 </p>
@@ -412,7 +428,6 @@ const PoolsModal = ({ db, user, pools, onClose }) => {
                                     <ul>
                                         {(memberDetails[pool.id] || []).map((member, index) => (
                                             <li key={index} className="member-item">
-                                                <img src={member.photoURL || `https://placehold.co/24x24/18181b/a1a1aa?text=${member.displayName.charAt(0)}`} alt={member.displayName} />
                                                 <span>{member.displayName}</span>
                                             </li>
                                         ))}
@@ -511,9 +526,9 @@ const SpendingChart = ({ data }) => {
 
 
 // --- Main Application Component ---
-const MainApp = ({ db, user, auth, storage }) => {
+const MainApp = ({ db, user, auth }) => {
   const userId = user.uid;
-  const [expenses, setExpenses] = useState([]);
+  const [allExpenses, setAllExpenses] = useState([]);
   const [title, setTitle] = useState('');
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState('Food');
@@ -536,6 +551,10 @@ const MainApp = ({ db, user, auth, storage }) => {
   const [isSplitting, setIsSplitting] = useState(false);
   const [splitMembers, setSplitMembers] = useState([]);
   const [poolMembers, setPoolMembers] = useState([]);
+  
+  // State for monthly tracking
+  const [filterDate, setFilterDate] = useState(new Date().toISOString().slice(0, 7));
+
 
   // Fetch user's pools
   useEffect(() => {
@@ -559,7 +578,7 @@ const MainApp = ({ db, user, auth, storage }) => {
     const qExpenses = query(expensesRef);
     const unsubscribe = onSnapshot(qExpenses, (snapshot) => {
         const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).sort((a, b) => new Date(b.date) - new Date(a.date));
-        setExpenses(data);
+        setAllExpenses(data);
     }, (err) => { 
         console.error("Error fetching expenses: ", err); 
         setError("Failed to load expenses."); 
@@ -597,7 +616,8 @@ const MainApp = ({ db, user, auth, storage }) => {
   }, [db, userId, currentPoolId, pools]);
   
     const callGeminiAPI = async (systemPrompt, userPrompt) => {
-        const apiKey = import.meta.env.VITE_GEMINI_API_KEY; const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+        const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
         const payload = { contents: [{ parts: [{ text: userPrompt }] }], systemInstruction: { parts: [{ text: systemPrompt }] } };
         try {
             const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
@@ -610,6 +630,10 @@ const MainApp = ({ db, user, auth, storage }) => {
         }
     };
     
+    const expenses = useMemo(() => {
+        return allExpenses.filter(exp => exp.date.startsWith(filterDate));
+    }, [allExpenses, filterDate]);
+
     const handleGetAnalysis = async () => {
         if (expenses.length === 0) { setAnalysis("Not enough data to analyze."); return; }
         setIsAnalyzing(true); setAnalysis(''); setAnalysisError('');
@@ -673,6 +697,8 @@ const MainApp = ({ db, user, auth, storage }) => {
             const amountPerPerson = totalAmount / splitMembers.length;
             const splitGroupId = Date.now().toString();
 
+            const payerData = poolMembers.find(m => m.id === userId);
+
             splitMembers.forEach(memberId => {
                 const memberData = poolMembers.find(m => m.id === memberId);
                 const newExpenseRef = doc(collection(db, collectionPath));
@@ -684,7 +710,7 @@ const MainApp = ({ db, user, auth, storage }) => {
                     authorId: memberId, 
                     authorName: memberData?.displayName || `User...${memberId.slice(-4)}`,
                     paidById: userId,
-                    paidByName: user.displayName || user.email,
+                    paidByName: payerData?.displayName || user.email,
                     splitGroupId
                 });
             });
@@ -757,8 +783,8 @@ const MainApp = ({ db, user, auth, storage }) => {
 
   return (
     <>
-      {showProfile && <ProfileModal auth={auth} db={db} storage={storage} onClose={() => setShowProfile(false)} />}
-      {showPools && <PoolsModal db={db} user={user} pools={pools} onClose={() => setShowPools(false)} />}
+      {showProfile && <ProfileModal auth={auth} db={db} onClose={() => setShowProfile(false)} />}
+      {showPools && <PoolsModal db={db} user={user} pools={pools} onClose={() => setShowPools(false)} onPoolLeave={() => setCurrentPoolId('personal')} />}
       {showCollaborators && <CollaboratorsModal db={db} userId={userId} pools={pools} onClose={() => setShowCollaborators(false)} />}
 
       <div id="main-app">
@@ -770,9 +796,7 @@ const MainApp = ({ db, user, auth, storage }) => {
                       <h1>FinADR</h1>
                   </div>
                   <div className="header-actions">
-                      <button onClick={() => setShowProfile(true)} className="btn-icon" title="Profile">
-                        {user.photoURL ? <img src={user.photoURL} alt="My Profile" className="header-pfp" /> : <UserIcon />}
-                      </button>
+                      <button onClick={() => setShowProfile(true)} className="btn-icon" title="Profile"><UserIcon /></button>
                       <button onClick={() => setShowPools(true)} className="btn-icon" title="Manage Pools"><CollectionIcon /></button>
                       <button onClick={() => setShowCollaborators(true)} className="btn-icon" title="Collaborators"><UsersIcon/></button>
                       <button onClick={() => signOut(auth)} className="btn-icon" title="Logout"><LogoutIcon /></button>
@@ -780,11 +804,12 @@ const MainApp = ({ db, user, auth, storage }) => {
               </div>
             <p>Welcome, {user.displayName || user.email}!</p>
           </header>
-          <div className="context-switcher">
-            <select value={currentPoolId} onChange={e => setCurrentPoolId(e.target.value)}>
+          <div className="context-switcher-container">
+             <select value={currentPoolId} onChange={e => setCurrentPoolId(e.target.value)} className="context-switcher">
                 <option value="personal">Personal Expenses</option>
                 {pools.map(pool => <option key={pool.id} value={pool.id}>{pool.name}</option>)}
             </select>
+            <input type="month" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="month-picker" />
           </div>
           <div id="add-expense-btn-container">
              <button onClick={toggleForm} className="btn-add-expense"><PlusIcon /></button>
@@ -816,7 +841,6 @@ const MainApp = ({ db, user, auth, storage }) => {
                             {poolMembers.map(member => (
                                 <label key={member.id} className="split-member-label">
                                     <input type="checkbox" checked={splitMembers.includes(member.id)} onChange={() => handleSplitMemberToggle(member.id)} />
-                                     <img src={member.photoURL || `https://placehold.co/24x24/18181b/a1a1aa?text=${member.displayName.charAt(0)}`} alt={member.displayName} />
                                     {member.displayName}
                                 </label>
                             ))}
@@ -839,7 +863,7 @@ const MainApp = ({ db, user, auth, storage }) => {
             </div>
           )}
           <div className="card">
-              <h2>Summary for {currentContextName}</h2>
+              <h2>Summary for {currentContextName} ({new Date(filterDate).toLocaleString('default', { month: 'long', year: 'numeric' })})</h2>
               <div className="summary-content">
                   <div className="summary-total"><span>Total Expenses:</span><span>₹{totalExpenses.toFixed(2)}</span></div>
                   <hr/>
@@ -854,11 +878,11 @@ const MainApp = ({ db, user, auth, storage }) => {
               </div>
           </div>
           <div className="card">
-            <h2>History for {currentContextName}</h2>
+            <h2>History for {currentContextName} ({new Date(filterDate).toLocaleString('default', { month: 'long', year: 'numeric' })})</h2>
             {expenses.length === 0 ? (<p className="no-data">No expenses recorded. Tap '+' to add one!</p>) : (
               <ul className="expense-list">
-                {expenses.map((expense) => (
-                  <li key={expense.id}>
+                {expenses.map((expense, index) => (
+                  <li key={expense.id} className="expense-list-item" style={{ animationDelay: `${index * 50}ms` }}>
                     <div className="expense-details">
                       <p className="expense-title">{expense.title}</p>
                       <p className="expense-meta">{expense.category} - {new Date(expense.date).toLocaleString()}</p>
@@ -882,11 +906,17 @@ const MainApp = ({ db, user, auth, storage }) => {
           body { font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; background-color: #000; color: #d4d4d8; }
           
           /* --- Animations --- */
-          @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+          @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+          @keyframes slideInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+          @keyframes popIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
           @keyframes float { 0% { transform: translateY(0px); } 50% { transform: translateY(-10px); } 100% { transform: translateY(0px); } }
           @keyframes pulse { 0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.7); } 70% { transform: scale(1.05); box-shadow: 0 0 10px 15px rgba(22, 163, 74, 0); } 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(22, 163, 74, 0); } }
           @keyframes quirky-wobble { 0%, 100% { transform: rotate(0deg); } 25% { transform: rotate(5deg); } 75% { transform: rotate(-5deg); } }
+          @keyframes spin { to { transform: rotate(360deg); } }
+
           .floating { animation: float 3s ease-in-out infinite; }
+          .card, .form-card { animation: slideInUp 0.5s ease-out forwards; }
+          .expense-list-item { animation: slideInUp 0.4s ease-out forwards; opacity: 0; }
           
           /* --- Utility Classes --- */
           .container { width: 100%; max-width: 640px; margin: auto; padding: 1rem; }
@@ -915,6 +945,7 @@ const MainApp = ({ db, user, auth, storage }) => {
           .btn-suggest { background-color: rgba(16, 185, 129, 0.1); color: #6ee7b7; padding: 0.5rem 0.75rem; border-radius: 0.5rem; flex-shrink: 0; display: flex; align-items: center; gap: 0.25rem; }
           .btn-suggest:hover { background-color: rgba(16, 185, 129, 0.2); } .btn-suggest:disabled { opacity: 0.5; }
           .sparkles-icon { display: inline-block; margin-right: 0.25rem; }
+          .btn-leave-pool { font-size: 0.8rem; padding: 0.2rem 0.6rem; background-color: #ef4444; color: white; border-radius: 0.5rem; }
           
           /* --- Forms & Inputs --- */
           input, select { width: 100%; padding: 0.75rem 1rem; background-color: #27272a; border: 1px solid #3f3f46; color: white; border-radius: 0.5rem; font-size: 1rem; transition: border-color 0.2s, box-shadow 0.2s; }
@@ -922,15 +953,32 @@ const MainApp = ({ db, user, auth, storage }) => {
           .input-group { display: flex; gap: 0.5rem; align-items: center; }
           
           /* --- Screens --- */
-          #loading-screen, #welcome-screen, #auth-screen { display: flex; flex-direction: column; min-height: 100vh; align-items: center; justify-content: center; padding: 2rem; }
+          #loading-screen { display: flex; flex-direction: column; min-height: 100vh; align-items: center; justify-content: center; padding: 2rem; }
+          .spinner { width: 48px; height: 48px; border: 5px solid #3f3f46; border-bottom-color: #22c55e; border-radius: 50%; display: inline-block; animation: spin 1s linear infinite; }
+          #welcome-screen, #auth-screen { display: flex; flex-direction: column; min-height: 100vh; align-items: center; justify-content: center; padding: 2rem; }
           #welcome-screen { justify-content: flex-start; }
-          #welcome-screen nav { display: flex; justify-content: space-between; align-items: center; width: 100%; }
+          #welcome-screen nav { display: flex; justify-content: space-between; align-items: center; width: 100%; max-width: 1024px; }
           .logo-container { display: flex; align-items: center; gap: 0.5rem; } .logo-sm { width: 2.5rem; height: 2.5rem; }
           .app-name { font-size: 1.5rem; font-weight: bold; color: #22c55e; }
           .nav-buttons { display: flex; gap: 0.5rem; }
           #welcome-screen .hero-section { flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
           #welcome-screen .hero-section h1 { font-size: 3rem; font-weight: bold; color: white; margin-bottom: 1rem; }
+          .tagline { font-size: 1.5rem; color: #a1a1aa; margin-bottom: 2rem; font-weight: 300;}
           #welcome-screen .hero-section p { font-size: 1.125rem; color: #a1a1aa; max-width: 40rem; margin-bottom: 2rem; }
+          
+          /* Features Section */
+          .features-section { width: 100%; max-width: 1024px; margin: 4rem auto; }
+          .section-title { font-size: 2.25rem; font-weight: bold; text-align: center; margin-bottom: 2.5rem; color: white; }
+          .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.5rem; }
+          .feature-card { background-color: #18181b; padding: 2rem 1.5rem; border-radius: 0.75rem; text-align: center; border: 1px solid #27272a; transition: transform 0.2s, box-shadow 0.2s; }
+          .feature-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2); }
+          .feature-icon { margin: 0 auto 1rem auto; width: 3rem; height: 3rem; color: #22c55e; }
+          .feature-card h4 { font-size: 1.25rem; font-weight: 600; margin-bottom: 0.5rem; color: white; }
+          .feature-card p { color: #a1a1aa; line-height: 1.6; }
+          
+          footer { width: 100%; text-align: center; padding: 2rem 0; border-top: 1px solid #27272a; color: #71717a; }
+
+
           .auth-container { width: 100%; max-width: 24rem; }
           .logo-container-large { display: flex; justify-content: center; margin-bottom: 1.5rem; } .logo-lg { width: 5rem; height: 5rem; }
           #auth-screen h1 { font-size: 1.875rem; font-weight: bold; color: #22c55e; text-align: center; margin-bottom: 0.5rem; }
@@ -952,7 +1000,8 @@ const MainApp = ({ db, user, auth, storage }) => {
           .header-pfp { width: 2rem; height: 2rem; border-radius: 9999px; object-fit: cover; }
 
           /* Main Content */
-          .context-switcher { margin-bottom: 1.5rem; }
+          .context-switcher-container { display: flex; gap: 1rem; margin-bottom: 1.5rem; }
+          .context-switcher, .month-picker { flex-grow: 1; }
           #add-expense-btn-container { position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 10; }
           .form-card { animation: fadeIn 0.5s ease-out forwards; }
           .form-card h2, .card h2 { font-size: 1.5rem; font-weight: 600; margin-bottom: 1rem; color: white; }
@@ -965,7 +1014,6 @@ const MainApp = ({ db, user, auth, storage }) => {
           .split-members-list { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem; margin-bottom: 1rem; }
           .split-member-label { display: flex; align-items: center; gap: 0.5rem; background-color: #27272a; padding: 0.5rem; border-radius: 0.5rem; cursor: pointer; }
           .split-member-label input { width: auto; }
-          .split-member-label img { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; }
           .split-result { text-align: center; font-weight: 600; color: #22c55e; margin-top: 0.5rem; }
 
 
@@ -987,8 +1035,8 @@ const MainApp = ({ db, user, auth, storage }) => {
           
           /* History List */
           .expense-list { display: flex; flex-direction: column; gap: 0.75rem; list-style: none; }
-          .expense-list li { display: flex; align-items: center; justify-content: space-between; padding: 1rem; background-color: rgba(39, 39, 42, 0.5); border-radius: 0.5rem; transition: background-color 0.2s; }
-          .expense-list li:hover { background-color: #27272a; }
+          .expense-list-item { display: flex; align-items: center; justify-content: space-between; padding: 1rem; background-color: rgba(39, 39, 42, 0.5); border-radius: 0.5rem; transition: background-color 0.2s; opacity: 0; }
+          .expense-list-item:hover { background-color: #27272a; }
           .expense-details { flex-grow: 1; }
           .expense-title { font-weight: bold; font-size: 1.125rem; color: #f4f4f5; }
           .expense-meta { font-size: 0.875rem; color: #a1a1aa; }
@@ -999,17 +1047,14 @@ const MainApp = ({ db, user, auth, storage }) => {
 
           /* --- Modals --- */
           .modal-overlay { position: fixed; inset: 0; background-color: rgba(0,0,0,0.6); z-index: 50; display: flex; justify-content: center; align-items: center; padding: 1rem; }
-          .modal-content { background-color: #18181b; border-radius: 0.75rem; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); width: 100%; max-width: 28rem; border: 1px solid #3f3f46; animation: fadeIn 0.3s ease-out; }
+          .modal-content { background-color: #18181b; border-radius: 0.75rem; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); width: 100%; max-width: 28rem; border: 1px solid #3f3f46; animation: popIn 0.3s ease-out; }
           .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.5rem; border-bottom: 1px solid #27272a; }
           .modal-header h2 { font-size: 1.25rem; font-weight: 600; color: white; }
           .modal-body { padding: 1.5rem; }
           .profile-modal-body, .pools-modal-body { display: flex; flex-direction: column; gap: 1rem; }
           .profile-modal-body label { font-weight: 500; font-size: 0.875rem; color: #a1a1aa; }
+          .username-display { text-align: center; color: #a1a1aa; font-style: italic; margin-bottom: 1rem; }
           .modal-actions { display: flex; justify-content: flex-end; }
-          .pfp-upload-container { display: flex; justify-content: center; margin-bottom: 1rem; position: relative; cursor: pointer; }
-          .pfp-preview { width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 3px solid #3f3f46; }
-          .pfp-overlay { position: absolute; inset: 0; background-color: rgba(0,0,0,0.5); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; opacity: 0; transition: opacity 0.2s; }
-          .pfp-upload-container:hover .pfp-overlay { opacity: 1; }
           
           /* Pools Modal */
           .pools-modal-body { gap: 1.5rem; }
@@ -1018,6 +1063,7 @@ const MainApp = ({ db, user, auth, storage }) => {
           .pool-list-container > h3 { font-size: 1.125rem; font-weight: 600; color: white; margin-bottom: 0.5rem; }
           .pool-list-container ul { display: flex; flex-direction: column; gap: 0.5rem; max-height: 10rem; overflow-y: auto; list-style: none; }
           .pool-list-container > ul > li { background-color: #27272a; padding: 0.75rem; border-radius: 0.5rem; }
+          .pool-header { display: flex; justify-content: space-between; align-items: center; }
           .pool-name { font-weight: 600; }
           .pool-id { font-size: 0.75rem; color: #a1a1aa; cursor: pointer; }
           .pool-id:hover { color: white; }
@@ -1025,12 +1071,10 @@ const MainApp = ({ db, user, auth, storage }) => {
           .pool-members h4 { font-size: 0.875rem; color: #a1a1aa; margin-bottom: 0.25rem; }
           .pool-members ul { list-style: none; padding-left: 0; color: #d4d4d8; font-size: 0.875rem; }
           .member-item { display: flex; align-items: center; gap: 0.5rem; padding: 0.25rem 0; }
-          .member-item img { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; }
           
           /* Collaborators Modal */
           .collaborators-list ul { list-style: none; display: flex; flex-direction: column; gap: 0.75rem; max-height: 40vh; overflow-y: auto; }
           .collaborators-list li { display: flex; align-items: center; gap: 0.75rem; background-color: #27272a; padding: 0.5rem; border-radius: 0.5rem; }
-          .collaborators-list li img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
           .collaborators-list li span { font-weight: 600; }
       `}</style>
       </div>
@@ -1083,7 +1127,7 @@ export default function App() {
 
   const handleNavigate = (targetView, mode = 'login') => { setAuthInitialMode(mode); setView(targetView); };
   
-  if (isLoading) { return <div id="loading-screen"><div>Initializing...</div></div>; }
+  if (isLoading) { return <div id="loading-screen"><div className="spinner"></div></div>; }
   
   switch(view) {
     case 'app':
@@ -1094,3 +1138,4 @@ export default function App() {
         return <WelcomeScreen onNavigate={handleNavigate} />;
   }
 }
+
