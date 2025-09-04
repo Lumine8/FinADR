@@ -535,3 +535,65 @@ body.dark-mode .profile-stats h3,
 body.dark-mode .profile-achievements h3 {
   color: #18181b;
 }
+
+/* --- Profile Page Animations --- */
+
+/* Fade-in for cards */
+.card {
+  opacity: 0;
+  transform: translateY(10px);
+  animation: fadeInUp 0.6s ease forwards;
+}
+.card:nth-child(1) { animation-delay: 0.1s; }
+.card:nth-child(2) { animation-delay: 0.2s; }
+.card:nth-child(3) { animation-delay: 0.3s; }
+.card:nth-child(4) { animation-delay: 0.4s; }
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+
+
+@keyframes typing {
+  from { width: 0 }
+  to { width: 100% }
+}
+
+@keyframes blink {
+  from, to { border-color: transparent }
+  50% { border-color: #16a34a }
+}
+
+/* Progress bar fill animation */
+.progress-fill {
+  height: 12px;
+  border-radius: 8px;
+  background-color: #16a34a;
+  width: 0;
+  animation: fillBar 2s ease forwards;
+}
+
+@keyframes fillBar {
+  from { width: 0 }
+  to { width: var(--progress-width, 100%); }
+}
+
+/* Achievements glow pulse */
+.profile-achievements li {
+  list-style: none;
+  margin: 8px 0;
+  animation: pulseGlow 2s infinite alternate;
+}
+
+@keyframes pulseGlow {
+  from { text-shadow: 0 0 2px rgba(255,215,0,0.3); }
+  to { text-shadow: 0 0 10px rgba(255,215,0,0.8); }
+}
