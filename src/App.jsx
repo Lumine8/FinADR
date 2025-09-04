@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { initializeApp } from 'firebase/app';
 import { 
   getAuth, 
@@ -10,13 +10,26 @@ import {
 } from 'firebase/auth';
 import { 
     getFirestore, collection, addDoc, onSnapshot, query, doc, updateDoc, 
-    deleteDoc, setLogLevel, where, arrayUnion, setDoc, documentId, getDocs, writeBatch, arrayRemove
+    deleteDoc, setLogLevel, where, arrayUnion, setDoc, documentId, getDocs, writeBatch, arrayRemove, getDoc
 } from 'firebase/firestore';
+import { getMessaging, getToken, onMessage } from "firebase/messaging";
+import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
+import { Doughnut } from 'react-chartjs-2';
 
-import {getStorage} from 'firebase/storage'
+import { FaUserAstronaut, FaPiggyBank, FaCoffee, FaPizzaSlice, FaUserCircle, FaTrophy, FaSignOutAlt, FaMoon, FaSun, FaFileExport } from "react-icons/fa";
+import { GiWaterDrop, GiTreasureMap, GiPartyPopper, GiAlarmClock } from "react-icons/gi";
+import { MdOutlineSavings, MdCheckCircle } from "react-icons/md";
+import { BsTrophy, BsPeopleFill } from "react-icons/bs";
+import { TbTargetArrow } from "react-icons/tb";
+import { IoFlash } from "react-icons/io5";
+import { FaHamburger, FaCar, FaShoppingBag, FaFileInvoiceDollar, FaFilm, FaEllipsisH } from "react-icons/fa";
+
 
 import Logo from './assets/logo.png';
 import './App.css';
+
+ChartJS.register(ArcElement, Tooltip, Legend);
+
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -28,86 +41,126 @@ const firebaseConfig = {
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
+import { FiPlus, FiLogOut, FiUser, FiUsers, FiX, FiTarget, FiHome, FiMenu } from "react-icons/fi";
+import { FaEdit, FaTrash, FaAward, FaBrain } from "react-icons/fa";
+import { MdAutoAwesome } from "react-icons/md";
+import { HiCollection } from "react-icons/hi";
+import { RiShieldCheckLine } from "react-icons/ri";
+import { BiGitBranch } from "react-icons/bi";
 
-// --- SVG Icons (using class for styling now) ---
-const PlusIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>;
-const EditIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="icon-sm" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fillRule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clipRule="evenodd" /></svg>;
-const DeleteIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="icon-sm" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clipRule="evenodd" /></svg>;
-const SparklesIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="icon-sm sparkles-icon" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M5 2a1 1 0 011 1v1h1a1 1 0 010 2H6v1a1 1 0 01-2 0V6H3a1 1 0 010-2h1V3a1 1 0 011-1zm11 1a1 1 0 011 1v1h1a1 1 0 110 2h-1v1a1 1 0 11-2 0v-1h-1a1 1 0 110-2h1V4a1 1 0 011-1zM5.293 8.293a1 1 0 011.414 0L8 9.586l1.293-1.293a1 1 0 111.414 1.414L9.414 11l1.293 1.293a1 1 0 01-1.414 1.414L8 12.414l-1.293 1.293a1 1 0 01-1.414-1.414L6.586 11 5.293 9.707a1 1 0 010-1.414zM15 9a1 1 0 011-1h1a1 1 0 110 2h-1a1 1 0 01-1-1zm-6 6a1 1 0 011 1v1h1a1 1 0 110 2h-1v1a1 1 0 11-2 0v-1H8a1 1 0 110-2h1v-1a1 1 0 011-1z" clipRule="evenodd" /></svg>;
-const LogoutIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>;
-const UserIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>;
-const UsersIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>;
-const CloseIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>;
-const SplitIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="icon-sm" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>;
-const CollectionIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2H5a2 2 0 00-2 2v2m14 0h-2m-2 0h2" /></svg>;
-const BrainIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="feature-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 8h6M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>;
-const ShieldCheckIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="feature-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 20.917l9 2.5a12.02 12.02 0 009-15.417z" /></svg>;
+const PlusIcon = () => <FiPlus className="icon" />;
+const EditIcon = () => <FaEdit className="icon-sm" />;
+const DeleteIcon = () => <FaTrash className="icon-sm" />;
+const SparklesIcon = () => <MdAutoAwesome className="icon-sm sparkles-icon" />;
+const LogoutIcon = () => <FiLogOut className="icon" />;
+const UserIcon = () => <FiUser className="icon" />;
+const UsersIcon = () => <FiUsers className="icon" />;
+const CloseIcon = () => <FiX className="icon" />;
+const SplitIcon = () => <BiGitBranch className="icon-sm" />;
+const CollectionIcon = () => <HiCollection className="icon" />;
+const BrainIcon = () => <FaBrain className="feature-icon" />;
+const ShieldCheckIcon = () => <RiShieldCheckLine className="feature-icon" />;
+const TargetIcon = () => <FiTarget className="icon" />;
+const TrophyIcon = () => <FaTrophy className="icon" />;
+const HomeIcon = () => <FiHome className="icon" />;
+const MenuIcon = () => <FiMenu className="icon" />;
+const AwardIcon = () => <FaAward className="icon" />;
 
-// --- Welcome Screen Component ---
+const CATEGORIES = ['Food', 'Transport', 'Shopping', 'Bills', 'Entertainment', 'Other'];
+
+// --- WelcomeScreen, AuthScreen, Modal, ProfileForm ---
 const WelcomeScreen = ({ onNavigate }) => (
-    <div id="welcome-screen">
-        <nav>
-            <div className="logo-container">
-                <img src={Logo} alt="FinADR Logo" className="logo-sm" />
-                <span className="app-name">FinADR</span>
-            </div>
-            <div className="nav-buttons">
-                <button onClick={() => onNavigate('auth', 'login')} className="btn-secondary">Login</button>
-                <button onClick={() => onNavigate('auth', 'signup')} className="btn-primary">Sign Up</button>
-            </div>
-        </nav>
-        <div className="hero-section">
-            <h1>Take Control of Your Finances</h1>
-            <h2 className="tagline">Your Finance and Life Advisor</h2>
-            <p>
-                Track personal expenses, manage shared budgets with friends, and get AI-powered insights to achieve your financial goals.
-            </p>
-            <button onClick={() => onNavigate('auth', 'signup')} className="btn-cta">
-                Get Started
-            </button>
-        </div>
+  <div id="welcome-screen" className="welcome-container">
+    {/* Top Navigation */}
+    <nav className="navbar">
+      <div className="logo-container">
+        <img src={Logo} alt="FinADR Logo" className="logo-sm" />
+        <span className="app-name">FinADR</span>
+      </div>
+      <div className="nav-buttons">
+        <button
+          onClick={() => onNavigate("auth", "login")}
+          className="btn btn-secondary"
+        >
+          Login
+        </button>
+        <button
+          onClick={() => onNavigate("auth", "signup")}
+          className="btn btn-primary"
+        >
+          Sign Up
+        </button>
+      </div>
+    </nav>
 
-        <div className="features-section">
-            <h3 className="section-title">Why Choose FinADR?</h3>
-            <div className="features-grid">
-                <div className="feature-card">
-                    <BrainIcon />
-                    <h4>Smart Tracking</h4>
-                    <p>AI suggestions and automatic timestamps make logging expenses effortless.</p>
-                </div>
-                <div className="feature-card">
-                    <UsersIcon />
-                    <h4>Collaborative Pools</h4>
-                    <p>Share finances with friends or family. Split bills and track group spending easily.</p>
-                </div>
-                <div className="feature-card">
-                    <SparklesIcon />
-                    <h4>AI-Powered Insights</h4>
-                    <p>Visualize your spending with charts and get personalized savings tips from our AI.</p>
-                </div>
-                <div className="feature-card">
-                    <ShieldCheckIcon />
-                    <h4>Secure & Private</h4>
-                    <p>Your financial data is encrypted and protected with industry-standard security.</p>
-                </div>
-            </div>
-        </div>
+    {/* Hero Section */}
+    <header className="hero-section">
+      <h1 className="hero-title">Take Control of Your Finances</h1>
+      <h2 className="tagline">Your Finance and Life Advisor</h2>
+      <p className="hero-description">
+        Track personal expenses, manage shared budgets with friends, and get
+        AI-powered insights to achieve your financial goals.
+      </p>
+      <button
+        onClick={() => onNavigate("auth", "signup")}
+        className="btn btn-cta"
+      >
+        Get Started
+      </button>
+    </header>
 
-        <footer>
-            <p>&copy; 2025 FinADR. All rights reserved.</p>
-        </footer>
-    </div>
+    {/* Features Section */}
+    <section className="features-section">
+      <h3 className="section-title">Why Choose FinADR?</h3>
+      <div className="features-grid">
+        <div className="feature-card">
+          <BrainIcon />
+          <h4>Smart Tracking</h4>
+          <p>
+            AI suggestions and automatic timestamps make logging expenses
+            effortless.
+          </p>
+        </div>
+        <div className="feature-card">
+          <UsersIcon />
+          <h4>Collaborative Pools</h4>
+          <p>
+            Share finances with friends or family. Split bills and track group
+            spending easily.
+          </p>
+        </div>
+        <div className="feature-card">
+          <SparklesIcon />
+          <h4>AI-Powered Insights</h4>
+          <p>
+            Visualize your spending with charts and get personalized savings
+            tips from our AI.
+          </p>
+        </div>
+        <div className="feature-card">
+          <ShieldCheckIcon />
+          <h4>Secure & Private</h4>
+          <p>
+            Your financial data is encrypted and protected with
+            industry-standard security.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    {/* Footer */}
+    <footer className="footer">
+      <p>&copy; 2025 FinADR. All rights reserved.</p>
+    </footer>
+  </div>
 );
 
-
-// --- Auth Screen Component ---
 const AuthScreen = ({ auth, db, initialMode }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [isLogin, setIsLogin] = useState(initialMode === 'login');
     const [error, setError] = useState('');
     const appId = "1:608681523529:web:8f3bed536feada05224298";
-    
     const adjectives = ['Swift', 'Clever', 'Happy', 'Brave', 'Wise', 'Silent', 'Golden', 'Red', 'Cyber', 'Aqua'];
     const nouns = ['Panda', 'Tiger', 'Lion', 'Eagle', 'Fox', 'River', 'Star', 'Moon', 'Byte', 'Jet'];
 
@@ -118,7 +171,7 @@ const AuthScreen = ({ auth, db, initialMode }) => {
     const handleAuthAction = async (e) => {
         e.preventDefault();
         setError('');
-        if(password.length < 6) {
+        if (password.length < 6) {
             setError("Password must be at least 6 characters long.");
             return;
         }
@@ -128,37 +181,38 @@ const AuthScreen = ({ auth, db, initialMode }) => {
             } else {
                 const userCredential = await createUserWithEmailAndPassword(auth, email, password);
                 const user = userCredential.user;
-
-                // Generate and check for a unique username
                 const usersRef = collection(db, `artifacts/${appId}/public/data/users`);
                 let uniqueUsername = '';
                 let isUnique = false;
-                
                 while (!isUnique) {
                     const randomAdjective = adjectives[Math.floor(Math.random() * adjectives.length)];
                     const randomNoun = nouns[Math.floor(Math.random() * nouns.length)];
-                    const randomNumber = Math.floor(Math.random() * 900) + 100; // 100-999
+                    const randomNumber = Math.floor(Math.random() * 900) + 100;
                     const potentialUsername = `${randomAdjective}${randomNoun}${randomNumber}`;
-                    
                     const q = query(usersRef, where("displayName", "==", potentialUsername));
                     const querySnapshot = await getDocs(q);
-
                     if (querySnapshot.empty) {
                         uniqueUsername = potentialUsername;
                         isUnique = true;
                     }
                 }
-
-                // Update Auth profile and create public Firestore doc
-                await updateProfile(user, { displayName: uniqueUsername });
+                
+                const batch = writeBatch(db);
+                
                 const userProfileRef = doc(db, `artifacts/${appId}/public/data/users`, user.uid);
-                await setDoc(userProfileRef, { displayName: uniqueUsername });
+                batch.set(userProfileRef, { displayName: uniqueUsername, location: '', budgets: {} });
+
+                const achievementRef = doc(collection(db, `artifacts/${appId}/public/data/users/${user.uid}/achievements`), 'joined-the-club');
+                batch.set(achievementRef, { name: 'Joined the Club', unlockedAt: new Date().toISOString() });
+
+                await updateProfile(user, { displayName: uniqueUsername });
+                await batch.commit();
             }
         } catch (err) {
             setError(err.message.replace('Firebase: ', ''));
         }
     };
-    
+
     return (
         <div id="auth-screen">
             <div className="auth-container">
@@ -167,14 +221,12 @@ const AuthScreen = ({ auth, db, initialMode }) => {
                 </div>
                 <h1>{isLogin ? 'Welcome Back' : 'Create Account'}</h1>
                 <p>{isLogin ? 'Sign in to continue' : 'Get started with FinADR'}</p>
-                
                 <form onSubmit={handleAuthAction} className="auth-form">
                     <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required />
                     <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required />
                     {error && <p className="error-message centered">{error}</p>}
                     <button type="submit" className="btn-primary full-width">{isLogin ? 'Login' : 'Sign Up'}</button>
                 </form>
-                
                 <p className="auth-toggle">
                     {isLogin ? "Don't have an account?" : "Already have an account?"}
                     <button onClick={() => setIsLogin(!isLogin)}>{isLogin ? 'Sign Up' : 'Login'}</button>
@@ -184,7 +236,6 @@ const AuthScreen = ({ auth, db, initialMode }) => {
     );
 };
 
-// --- Modal Component ---
 const Modal = ({ children, title, onClose }) => (
     <div className="modal-overlay">
         <div className="modal-content">
@@ -197,24 +248,20 @@ const Modal = ({ children, title, onClose }) => (
     </div>
 );
 
-// --- Profile Modal ---
-const ProfileModal = ({ auth, db, onClose }) => {
+const ProfileForm = ({ auth, db }) => {
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
     const appId = "1:608681523529:web:8f3bed536feada05224298";
     const [newUsername, setNewUsername] = useState(auth.currentUser.displayName || '');
 
-
     const handleSave = async () => {
         setError('');
         setSuccess('');
         const nameToSave = newUsername.trim();
-
         if (!nameToSave) {
             setError("Display name cannot be empty.");
             return;
         }
-        
         if (nameToSave !== auth.currentUser.displayName) {
             const usersRef = collection(db, `artifacts/${appId}/public/data/users`);
             const q = query(usersRef, where("displayName", "==", nameToSave));
@@ -224,90 +271,34 @@ const ProfileModal = ({ auth, db, onClose }) => {
                 return;
             }
         }
-        
         try {
             await updateProfile(auth.currentUser, { displayName: nameToSave });
             const userProfileRef = doc(db, `artifacts/${appId}/public/data/users`, auth.currentUser.uid);
             await setDoc(userProfileRef, { displayName: nameToSave }, { merge: true });
-
             setSuccess("Username updated successfully!");
-            setTimeout(() => onClose(), 1500);
+            setTimeout(() => setSuccess(''), 2000);
         } catch (err) {
             setError(err.message);
         }
     };
 
     return (
-        <Modal title="Edit Profile" onClose={onClose}>
-            <div className="profile-modal-body">
-                <label>Display Name</label>
-                <input type="text" value={newUsername} onChange={(e) => setNewUsername(e.target.value)} />
-                {error && <p className="error-message">{error}</p>}
-                {success && <p className="success-message">{success}</p>}
-                <div className="modal-actions">
-                    <button onClick={handleSave} className="btn-primary">
-                        Save Username
-                    </button>
-                </div>
+        <div className="profile-modal-body">
+            <label>Display Name</label>
+            <input type="text" value={newUsername} onChange={(e) => setNewUsername(e.target.value)} />
+            {error && <p className="error-message">{error}</p>}
+            {success && <p className="success-message">{success}</p>}
+            <div className="modal-actions">
+                <button onClick={handleSave} className="btn-primary">
+                    Save Username
+                </button>
             </div>
-        </Modal>
+        </div>
     );
 };
 
-
-// --- Collaborators Modal ---
-const CollaboratorsModal = ({ db, pools, userId, onClose }) => {
-    const [collaborators, setCollaborators] = useState([]);
-    const appId = "1:608681523529:web:8f3bed536feada05224298";
-    
-    useEffect(() => {
-        const fetchCollaborators = async () => {
-            if (!pools.length) return;
-
-            const allMemberIds = [...new Set(pools.flatMap(p => p.members))].filter(id => id !== userId);
-            if (!allMemberIds.length) return;
-            
-            try {
-                const usersRef = collection(db, `artifacts/${appId}/public/data/users`);
-                const q = query(usersRef, where(documentId(), 'in', allMemberIds));
-                const userDocs = await getDocs(q);
-                
-                const users = userDocs.docs.map(doc => ({
-                    id: doc.id,
-                    ...doc.data()
-                }));
-                setCollaborators(users);
-
-            } catch (err) {
-                console.error("Error fetching collaborators:", err);
-            }
-        };
-
-        fetchCollaborators();
-    }, [pools, db, userId]);
-
-    return (
-        <Modal title="Collaborators" onClose={onClose}>
-            <div className="collaborators-list">
-                {collaborators.length > 0 ? (
-                    <ul>
-                        {collaborators.map(user => (
-                            <li key={user.id}>
-                                <span>{user.displayName}</span>
-                            </li>
-                        ))}
-                    </ul>
-                ) : (
-                    <p className="no-data">You are not collaborating with anyone yet. Join a pool to start!</p>
-                )}
-            </div>
-        </Modal>
-    );
-};
-
-
-// --- Pools Modal ---
-const PoolsModal = ({ db, user, pools, onClose, onPoolLeave }) => {
+// --- PoolsModal, SpendingChart, BudgetModal, LocationModal, Achievements ---
+const PoolsModal = ({ db, user, pools, onPoolLeave }) => {
     const userId = user.uid;
     const [poolName, setPoolName] = useState('');
     const [joinId, setJoinId] = useState('');
@@ -316,48 +307,40 @@ const PoolsModal = ({ db, user, pools, onClose, onPoolLeave }) => {
     const [memberDetails, setMemberDetails] = useState({});
     const appId = "1:608681523529:web:8f3bed536feada05224298";
 
+    const awardBadge = async (badgeId, badgeData) => {
+        const achievementRef = doc(db, `artifacts/${appId}/public/data/users/${userId}/achievements`, badgeId);
+        const docSnap = await getDoc(achievementRef);
+        if (!docSnap.exists()) {
+            await setDoc(achievementRef, badgeData);
+            alert(`New Badge Unlocked: ${badgeData.name}!`);
+        }
+    };
+
     useEffect(() => {
         const fetchMemberNames = async () => {
             if (!pools.length) return;
-
             const allMemberIds = [...new Set(pools.flatMap(p => p.members))];
             if (!allMemberIds.length) return;
-            
             try {
                 const usersRef = collection(db, `artifacts/${appId}/public/data/users`);
                 const q = query(usersRef, where(documentId(), 'in', allMemberIds));
                 const userDocs = await getDocs(q);
-                
                 const userMap = {};
-                userDocs.forEach(doc => {
-                    userMap[doc.id] = {
-                        displayName: doc.data().displayName,
-                    };
-                });
-                
-                if (!userMap[userId]) {
-                    userMap[userId] = { displayName: user.displayName };
-                }
-
+                userDocs.forEach(doc => { userMap[doc.id] = { displayName: doc.data().displayName }; });
+                if (!userMap[userId]) { userMap[userId] = { displayName: user.displayName }; }
                 const details = {};
-                pools.forEach(pool => {
-                    details[pool.id] = pool.members.map(uid => userMap[uid] || { displayName: `User...${uid.slice(-4)}` });
-                });
+                pools.forEach(pool => { details[pool.id] = pool.members.map(uid => userMap[uid] || { displayName: `User...${uid.slice(-4)}` }); });
                 setMemberDetails(details);
-
-            } catch (err) {
-                console.error("Error fetching member names:", err);
-            }
+            } catch (err) { console.error("Error fetching member names:", err); }
         };
-
         fetchMemberNames();
-    }, [pools, db, user, userId]);
-
+    }, [pools, db, user, appId, userId]);
 
     const handleCreatePool = async () => {
         if (!poolName.trim()) { setError("Pool name cannot be empty."); return; }
         setError(''); setSuccess('');
         try {
+            await awardBadge('pool-pioneer', { name: 'Pool Pioneer', unlockedAt: new Date().toISOString() });
             const poolsRef = collection(db, `artifacts/${appId}/public/data/pools`);
             await addDoc(poolsRef, { name: poolName.trim(), ownerId: userId, members: [userId] });
             setSuccess(`Pool "${poolName.trim()}" created!`);
@@ -369,6 +352,7 @@ const PoolsModal = ({ db, user, pools, onClose, onPoolLeave }) => {
         if (!joinId.trim()) { setError("Please enter a Pool ID to join."); return; }
         setError(''); setSuccess('');
         try {
+            await awardBadge('team-player', { name: 'Team Player', unlockedAt: new Date().toISOString() });
             const poolRef = doc(db, `artifacts/${appId}/public/data/pools`, joinId.trim());
             await updateDoc(poolRef, { members: arrayUnion(userId) });
             setSuccess("Successfully joined pool!");
@@ -385,15 +369,20 @@ const PoolsModal = ({ db, user, pools, onClose, onPoolLeave }) => {
             const poolRef = doc(db, `artifacts/${appId}/public/data/pools`, poolId);
             await updateDoc(poolRef, { members: arrayRemove(userId) });
             setSuccess("You have left the pool.");
-            onPoolLeave();
+            if (onPoolLeave) onPoolLeave();
         } catch (err) {
              console.error("Leave pool error:", err);
              setError("Could not leave the pool.");
         }
     };
 
+    const handleRemind = (memberName) => {
+        alert(`A reminder has been sent to ${memberName}! (This requires backend Cloud Functions to work)`);
+    };
+
     return (
-        <Modal title="Manage Expense Pools" onClose={onClose}>
+        <div className="card">
+            <h2>Manage Expense Pools</h2>
             <div className="pools-modal-body">
                 <div className="pool-action-group">
                     <h3>Create a New Pool</h3>
@@ -414,213 +403,761 @@ const PoolsModal = ({ db, user, pools, onClose, onPoolLeave }) => {
                 <div className="pool-list-container">
                     <h3>Your Pools</h3>
                     {pools.length > 0 ? (
-                        <ul> {pools.map(pool => (
-                            <li key={pool.id}>
-                                <div className="pool-header">
-                                    <p className="pool-name">{pool.name}</p>
-                                    <button className="btn-leave-pool" onClick={() => handleLeavePool(pool.id)}>Leave</button>
-                                </div>
-                                <p className="pool-id" onClick={() => navigator.clipboard.writeText(pool.id)}>
-                                    ID: {pool.id} (click to copy)
-                                </p>
-                                <div className="pool-members">
-                                    <h4>Members:</h4>
-                                    <ul>
-                                        {(memberDetails[pool.id] || []).map((member, index) => (
-                                            <li key={index} className="member-item">
-                                                <span>{member.displayName}</span>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </div>
-                            </li>))}
+                        <ul>
+                            {pools.map(pool => (
+                                <li key={pool.id}>
+                                    <div className="pool-header">
+                                        <p className="pool-name">{pool.name}</p>
+                                        <button className="btn-leave-pool" onClick={() => handleLeavePool(pool.id)}>Leave</button>
+                                    </div>
+                                    <p className="pool-id" onClick={() => navigator.clipboard.writeText(pool.id)}>
+                                        ID: {pool.id} (click to copy)
+                                    </p>
+                                    <div className="pool-members">
+                                        <h4>Members:</h4>
+                                        <ul>
+                                            {(memberDetails[pool.id] || []).map((member, index) => (
+                                                <li key={index} className="member-item">
+                                                    <span>{member.displayName}</span>
+                                                    {member.displayName !== user.displayName && (
+                                                        <button className="btn-remind" onClick={() => handleRemind(member.displayName)}>Remind</button>
+                                                    )}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                </li>
+                            ))}
                         </ul>
                     ) : (<p className="no-data">You haven't joined any pools yet.</p>)}
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const SpendingChart = ({ data: chartData }) => {
+    const data = {
+        labels: chartData.map(item => item[0]),
+        datasets: [{
+            label: 'Spending',
+            data: chartData.map(item => item[1]),
+            backgroundColor: ['#22c55e', '#ef4444', '#3b82f6', '#eab308', '#8b5cf6', '#f97316', '#14b8a6'],
+            borderColor: '#18181b',
+            borderWidth: 4,
+        }]
+    };
+
+    const options = {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '70%',
+        plugins: {
+            legend: {
+                position: 'right',
+                labels: {
+                    color: '#a1a1aa',
+                    font: { size: 14 },
+                    boxWidth: 20,
+                }
+            },
+            tooltip: {
+                callbacks: {
+                    label: function (context) {
+                        let label = context.label || '';
+                        if (label) { label += ': '; }
+                        if (context.parsed !== null) {
+                            label += new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(context.parsed);
+                        }
+                        return label;
+                    }
+                }
+            }
+        }
+    };
+
+    return (
+        <div className="chart-container">
+            {chartData.length > 0 ? <Doughnut data={data} options={options} /> : <p className="no-data">No spending data for a chart yet.</p>}
+        </div>
+    );
+};
+
+
+const BudgetModal = ({ db, userId, userSettings, onClose }) => {
+    const [budgets, setBudgets] = useState(userSettings.budgets || {});
+    const [success, setSuccess] = useState('');
+    const appId = "1:608681523529:web:8f3bed536feada05224298";
+
+    const handleBudgetChange = (category, value) => {
+        setBudgets(prev => ({ ...prev, [category]: parseFloat(value) || 0 }));
+    };
+
+    const handleSaveBudgets = async () => {
+        try {
+            const settingsRef = doc(db, `artifacts/${appId}/public/data/users`, userId);
+            await updateDoc(settingsRef, { budgets });
+            setSuccess("Budgets saved successfully!");
+            setTimeout(() => onClose(), 1500);
+        } catch (err) {
+            console.error("Error saving budgets: ", err);
+        }
+    };
+
+    return (
+        <Modal title="Set Monthly Budgets" onClose={onClose}>
+            <div className="budget-modal-body">
+                <p>Set a monthly spending limit for each category.</p>
+                {CATEGORIES.map(cat => (
+                    <div className="input-group" key={cat}>
+                        <label>{cat}</label>
+                        <input
+                            type="number"
+                            value={budgets[cat] || ''}
+                            onChange={(e) => handleBudgetChange(cat, e.target.value)}
+                            placeholder="₹0.00"
+                        />
+                    </div>
+                ))}
+                {success && <p className="success-message centered">{success}</p>}
+                <div className="modal-actions">
+                    <button onClick={handleSaveBudgets} className="btn-primary">Save Budgets</button>
                 </div>
             </div>
         </Modal>
     );
 };
 
-// --- Chart Component ---
-const SpendingChart = ({ data }) => {
-    const chartRef = useRef(null);
-    const chartInstance = useRef(null);
+const LocationModal = ({ db, userId, onClose }) => {
+    const [location, setLocation] = useState('');
+    const [error, setError] = useState('');
+    const appId = "1:608681523529:web:8f3bed536feada05224298";
 
-    useEffect(() => {
-        if (!chartRef.current || !window.Chart) return;
-
-        const chartCtx = chartRef.current.getContext('2d');
-        if (chartInstance.current) {
-            chartInstance.current.destroy();
+    const handleSaveLocation = async () => {
+        if (!location.trim()) {
+            setError("Please enter your city name.");
+            return;
         }
-
-        const labels = data.map(item => item[0]);
-        const values = data.map(item => item[1]);
-        
-        const chartColors = [
-            '#22c55e', '#ef4444', '#3b82f6', '#eab308', 
-            '#8b5cf6', '#f97316', '#14b8a6'
-        ];
-
-        chartInstance.current = new window.Chart(chartCtx, {
-            type: 'doughnut',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'Spending',
-                    data: values,
-                    backgroundColor: chartColors,
-                    borderColor: '#18181b',
-                    borderWidth: 4,
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                cutout: '70%',
-                plugins: {
-                    legend: {
-                        position: 'right',
-                        labels: {
-                            color: '#a1a1aa',
-                            font: {
-                                size: 14
-                            },
-                            boxWidth: 20,
-                        }
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                let label = context.label || '';
-                                if (label) {
-                                    label += ': ';
-                                }
-                                if (context.parsed !== null) {
-                                    label += new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(context.parsed);
-                                }
-                                return label;
-                            }
-                        }
-                    }
-                }
-            }
-        });
-
-        return () => {
-            if (chartInstance.current) {
-                chartInstance.current.destroy();
-            }
-        };
-
-    }, [data]);
-
+        try {
+            const settingsRef = doc(db, `artifacts/${appId}/public/data/users`, userId);
+            await updateDoc(settingsRef, { location: location.trim() });
+            onClose(true);
+        } catch (err) {
+            console.error("Error saving location:", err);
+            setError("Could not save location.");
+        }
+    };
 
     return (
-        <div className="chart-container">
-            {data.length > 0 ? <canvas ref={chartRef}></canvas> : <p className="no-data">No spending data for a chart yet.</p>}
+        <Modal title="Set Your Location" onClose={() => onClose(false)}>
+            <div className="profile-modal-body">
+                <p>To give you personalized tips, we need to know your city.</p>
+                <label>City Name</label>
+                <input type="text" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="e.g., Vellore" />
+                {error && <p className="error-message">{error}</p>}
+                <div className="modal-actions">
+                    <button onClick={handleSaveLocation} className="btn-primary">Save & Continue</button>
+                </div>
+            </div>
+        </Modal>
+    );
+};
+
+const ALL_BADGES = {
+    'joined-the-club': { name: 'Joined the Club', description: 'Welcome! You\'ve officially started your financial journey.', icon: <svg xmlns="http://www.w3.org/2000/svg" className="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.363a1.76 1.76 0 013.417-.592V5.882a1.76 1.76 0 013.417.592l2.147 6.363a1.76 1.76 0 01-3.417.592z" /></svg> },
+    'first-drop': { name: 'First Drop', description: 'You\'ve logged your first expense. The first step is always the hardest!', icon: <svg xmlns="http://www.w3.org/2000/svg" className="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg> },
+    'pool-pioneer': { name: 'Pool Pioneer', description: 'You started your first expense pool! Collaboration is key.', icon: <svg xmlns="http://www.w3.org/2000/svg" className="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg> },
+    'team-player': { name: 'Team Player', description: 'You joined an expense pool. Better together!', icon: <UsersIcon /> },
+    'goal-smasher': { name: 'Goal Smasher', description: 'Met a monthly savings goal!', icon: <TrophyIcon /> },
+    'overachiever': { name: 'Overachiever', description: 'Hit 2x your savings goal. Flex much?', icon: <svg xmlns="http://www.w3.org/2000/svg" className="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg> },
+    'barely-made-it': { name: 'Barely Made It', description: "Hit your savings goal by a hair. Lucky...", icon: <svg xmlns="http://www.w3.org/2000/svg" className="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> },
+    'budget-pro': { name: 'Budget Pro', description: 'Stayed under budget for every category!', icon: <ShieldCheckIcon /> },
+    'caffeine-survivor': { name: 'Caffeine Survivor', description: 'Spent a *lot* on coffee. You okay?', icon: <svg xmlns="http://www.w3.org/2000/svg" className="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg> },
+    'early-bird': { name: 'Early Bird', description: 'Logged an expense before 8 AM.', icon: <svg xmlns="http://www.w3.org/2000/svg" className="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg> },
+    'foodie': { name: 'Foodie', description: 'More than 50% of your budget was for food. Respect.', icon: <svg xmlns="http://www.w3.org/2000/svg" className="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" /></svg> },
+};
+
+// --- Page Components ---
+// --- Updated and Corrected ProfilePage Component ---
+const ProfilePage = ({ auth, db }) => {
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const appId = "1:608681523529:web:8f3bed536feada05224298";
+  const [newUsername, setNewUsername] = useState(auth.currentUser.displayName || "");
+  const [achievements, setAchievements] = useState([]);
+  const [allExpenses, setAllExpenses] = useState([]); // store merged expenses
+  const [stats, setStats] = useState({
+    totalMonth: 0,
+    biggestCategory: "None",
+    goalProgress: 0,
+  });
+
+  // --- Fetch Achievements ---
+  useEffect(() => {
+    const achievementsRef = collection(db, `artifacts/${appId}/public/data/users/${auth.currentUser.uid}/achievements`);
+    const unsubscribe = onSnapshot(achievementsRef, (snapshot) => {
+      setAchievements(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+    return () => unsubscribe();
+  }, [auth.currentUser.uid, db, appId]);
+
+  // --- Fetch ALL Expenses from all pools ---
+  useEffect(() => {
+    const fetchAllExpenses = async () => {
+      try {
+        const poolsRef = collection(db, `artifacts/${appId}/public/data/users/${auth.currentUser.uid}/pools`);
+        const poolsSnapshot = await getDocs(poolsRef);
+
+        let mergedExpenses = [];
+        for (const poolDoc of poolsSnapshot.docs) {
+          const expensesRef = collection(poolDoc.ref, "expenses");
+          const expensesSnapshot = await getDocs(expensesRef);
+          const poolExpenses = expensesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          mergedExpenses = [...mergedExpenses, ...poolExpenses];
+        }
+
+        setAllExpenses(mergedExpenses);
+      } catch (err) {
+        console.error("Error fetching expenses:", err);
+      }
+    };
+
+    fetchAllExpenses();
+  }, [auth.currentUser.uid, db, appId]);
+
+  // --- Compute Quick Stats from ALL expenses ---
+  useEffect(() => {
+    if (!allExpenses || allExpenses.length === 0) return;
+
+    const monthKey = new Date().toISOString().slice(0, 7); // YYYY-MM
+    const thisMonthExpenses = allExpenses.filter(exp => exp.date?.startsWith(monthKey));
+
+    const totalMonth = thisMonthExpenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
+
+    const categoryMap = thisMonthExpenses.reduce((acc, exp) => {
+      acc[exp.category] = (acc[exp.category] || 0) + (exp.amount || 0);
+      return acc;
+    }, {});
+
+    const biggestCategory = Object.keys(categoryMap).length > 0
+      ? Object.entries(categoryMap).sort((a, b) => b[1] - a[1])[0][0]
+      : "None";
+
+    const goal = 10000; // Example monthly budget
+    const goalProgress = Math.min((totalMonth / goal) * 100, 100);
+
+    setStats({ totalMonth, biggestCategory, goalProgress });
+  }, [allExpenses]);
+
+  // --- Handle Username Save ---
+  const handleSave = async () => {
+    setError("");
+    setSuccess("");
+    const nameToSave = newUsername.trim();
+    if (!nameToSave) {
+      setError("Display name cannot be empty.");
+      return;
+    }
+    if (nameToSave !== auth.currentUser.displayName) {
+      const usersRef = collection(db, `artifacts/${appId}/public/data/users`);
+      const q = query(usersRef, where("displayName", "==", nameToSave));
+      const querySnapshot = await getDocs(q);
+      if (!querySnapshot.empty) {
+        setError("This username is already taken.");
+        return;
+      }
+    }
+    try {
+      await updateProfile(auth.currentUser, { displayName: nameToSave });
+      const userProfileRef = doc(db, `artifacts/${appId}/public/data/users`, auth.currentUser.uid);
+      await setDoc(userProfileRef, { displayName: nameToSave }, { merge: true });
+      setSuccess("Username updated successfully!");
+      setTimeout(() => setSuccess(""), 3000);
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  // --- Profile Tagline Component ---
+  const ProfileTagline = () => {
+    const [quote, setQuote] = useState("🚀 Building better money habits");
+    const localQuotes = [
+      "An investment in knowledge pays the best interest. — Benjamin Franklin",
+      "Do not save what is left after spending, but spend what is left after saving. — Warren Buffett",
+      "The best time to plant a tree was 20 years ago. The second-best time is now. — Chinese Proverb",
+      "Beware of little expenses. A small leak will sink a great ship. — Benjamin Franklin",
+      "Financial freedom is freedom from fear. — Robert Kiyosaki",
+      "A budget is telling your money where to go instead of wondering where it went. — Dave Ramsey",
+      "It’s not your salary that makes you rich, it’s your spending habits. — Charles A. Jaffe",
+    ];
+
+    useEffect(() => {
+      const randomQuote = localQuotes[Math.floor(Math.random() * localQuotes.length)];
+      setQuote(`💡 ${randomQuote}`);
+    }, []);
+
+    return <p className="profile-tagline">{quote}</p>;
+  };
+
+  return (
+    <div className="profile-page">
+      <div className="card profile-header">
+        <p style={{fontSize:'10px'}}>{"{Profile-page under construction}"}</p>
+        <br />
+        <h2>{auth.currentUser.displayName || "Anonymous User"}</h2>
+        <ProfileTagline />
+      </div>
+
+      <div className="card profile-edit">
+        <label>Display Name</label>
+        <input
+          type="text"
+          value={newUsername}
+          onChange={(e) => setNewUsername(e.target.value)}
+        />
+        {error && <p className="error-message">{error}</p>}
+        {success && <p className="success-message">{success}</p>}
+        <button onClick={handleSave} className="btn-primary">
+          Save Username
+        </button>
+      </div>
+
+      <div className="card profile-stats">
+        <h3>📊 Quick Stats</h3>
+        <p><strong>This Month:</strong> ₹{stats.totalMonth.toFixed(2)}</p>
+        <p><strong>Biggest Category:</strong> {stats.biggestCategory}</p>
+        <div className="progress-bar">
+          <div className="progress-fill" style={{ width: `${stats.goalProgress}%` }}></div>
+        </div>
+        <p>{stats.goalProgress.toFixed(0)}% of monthly goal spent</p>
+      </div>
+
+      <div className="card profile-achievements">
+        <h3><FaTrophy /> Achievements</h3>
+        {achievements.length === 0 ? (
+          <p>No achievements yet. Start tracking expenses!</p>
+        ) : (
+          <ul>
+            {achievements.map(a => (
+              <li key={a.id}>🏅 {a.name}</li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// Replace the existing AchievementsPage component with this new one
+
+const AchievementsPage = ({ db, userId }) => {
+    const [unlockedAchievements, setUnlockedAchievements] = useState([]);
+    const [filter, setFilter] = useState('all'); // 'all', 'unlocked', 'locked'
+    const appId = "1:608681523529:web:8f3bed536feada05224298";
+
+    const ALL_BADGES = {
+  "joined-the-club": {
+    name: "Joined the Club",
+    description: "Welcome! You’ve officially started your financial journey.",
+    icon: <FaUserAstronaut className="text-purple-500 text-3xl" />,
+  },
+  "first-drop": {
+    name: "First Drop",
+    description: "You’ve logged your first expense. The journey begins!",
+    icon: <GiWaterDrop className="text-blue-400 text-3xl" />,
+  },
+  "pool-pioneer": {
+    name: "Pool Pioneer",
+    description: "You started your first expense pool! Collaboration is key.",
+    icon: <GiTreasureMap className="text-yellow-600 text-3xl" />,
+  },
+  "team-player": {
+    name: "Team Player",
+    description: "You joined an expense pool. Better together!",
+    icon: <BsPeopleFill className="text-green-500 text-3xl" />,
+  },
+  "goal-smasher": {
+    name: "Goal Smasher",
+    description: "Met a monthly savings goal!",
+    icon: <TbTargetArrow className="text-red-500 text-3xl" />,
+  },
+  "overachiever": {
+    name: "Overachiever",
+    description: "Hit 2x your savings goal. Flex much?",
+    icon: <BsTrophy className="text-yellow-500 text-3xl" />,
+  },
+  "barely-made-it": {
+    name: "Barely Made It",
+    description: "Hit your savings goal by a hair. Lucky...",
+    icon: <IoFlash className="text-orange-400 text-3xl" />,
+  },
+  "budget-pro": {
+    name: "Budget Pro",
+    description: "Stayed under budget for every category!",
+    icon: <MdOutlineSavings className="text-teal-500 text-3xl" />,
+  },
+  "caffeine-survivor": {
+    name: "Caffeine Survivor",
+    description: "Spent a *lot* on coffee. You okay?",
+    icon: <FaCoffee className="text-brown-600 text-3xl" />,
+  },
+  "early-bird": {
+    name: "Early Bird",
+    description: "Logged an expense before 8 AM.",
+    icon: <GiAlarmClock className="text-indigo-500 text-3xl" />,
+  },
+  "foodie": {
+    name: "Foodie",
+    description: "More than 50% of your budget was for food. Respect.",
+    icon: <FaPizzaSlice className="text-pink-500 text-3xl" />,
+  },
+  "celebrator": {
+    name: "Celebrator",
+    description: "Unlocked 5 achievements. Keep going!",
+    icon: <GiPartyPopper className="text-fuchsia-500 text-3xl" />,
+  },
+  "consistent-saver": {
+    name: "Consistent Saver",
+    description: "Saved every month for 6 months straight.",
+    icon: <FaPiggyBank className="text-emerald-500 text-3xl" />,
+  },
+  "certified-pro": {
+    name: "Certified Pro",
+    description: "Unlocked all achievements. You legend!",
+    icon: <MdCheckCircle className="text-lime-600 text-3xl" />,
+  },
+};
+    
+    useEffect(() => {
+        if (!db || !userId) return;
+        const achievementsRef = collection(db, `artifacts/${appId}/public/data/users/${userId}/achievements`);
+        const q = query(achievementsRef);
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const unlockedIds = snapshot.docs.map(doc => {
+                const baseId = doc.id.includes('-') ? doc.id.split('-').slice(0, -1).join('-') : doc.id;
+                return baseId;
+            });
+            setUnlockedAchievements(unlockedIds);
+        });
+        return () => unsubscribe();
+    }, [db, userId, appId]);
+
+    const filteredBadges = useMemo(() => {
+        return Object.entries(ALL_BADGES).filter(([id]) => {
+            const isUnlocked = unlockedAchievements.includes(id);
+            if (filter === 'unlocked') return isUnlocked;
+            if (filter === 'locked') return !isUnlocked;
+            return true;
+        });
+    }, [unlockedAchievements, filter]);
+
+    return (
+        <div className="page-container">
+            <div className="card">
+                <h2>All Achievements</h2>
+                <p className="subtitle">Track your progress and unlock all the badges!</p>
+                
+                <div className="filter-toggle">
+                    <button className={`toggle-btn ${filter === 'all' ? 'active' : ''}`} onClick={() => setFilter('all')}>All</button>
+                    <button className={`toggle-btn ${filter === 'unlocked' ? 'active' : ''}`} onClick={() => setFilter('unlocked')}>Unlocked</button>
+                    <button className={`toggle-btn ${filter === 'locked' ? 'active' : ''}`} onClick={() => setFilter('locked')}>Locked</button>
+                </div>
+
+                <div className="achievements-grid full-page">
+                    {filteredBadges.map(([id, badge]) => {
+                        const isUnlocked = unlockedAchievements.includes(id);
+                        return (
+                            <div key={id} className={`achievement-card ${isUnlocked ? 'unlocked' : 'locked'}`} title={`${badge.name}: ${badge.description}`}>
+                                <div className="achievement-icon">{badge.icon}</div>
+                                <p className="achievement-name">{badge.name}</p>
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
         </div>
     );
 };
 
 
-// --- Main Application Component ---
-const MainApp = ({ db, user, auth }) => {
-  const userId = user.uid;
-  const [allExpenses, setAllExpenses] = useState([]);
-  const [title, setTitle] = useState('');
-  const [amount, setAmount] = useState('');
-  const [category, setCategory] = useState('Food');
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 16));
-  const [editingId, setEditingId] = useState(null);
-  const [showForm, setShowForm] = useState(false);
-  const [error, setError] = useState('');
-  const [showProfile, setShowProfile] = useState(false);
-  const [showPools, setShowPools] = useState(false);
-  const [showCollaborators, setShowCollaborators] = useState(false);
-  const [pools, setPools] = useState([]);
-  const [currentPoolId, setCurrentPoolId] = useState('personal');
-  const [analysis, setAnalysis] = useState('');
-  const [analysisError, setAnalysisError] = useState('');
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [isSuggesting, setIsSuggesting] = useState(false);
-  const appId = "1:608681523529:web:8f3bed536feada05224298";
+const PoolsPage = ({ db, user, pools, onPoolLeave }) => (
+    <div className="page-container">
+        <PoolsModal db={db} user={user} pools={pools} onPoolLeave={onPoolLeave} />
+    </div>
+);
 
-  // State for bill splitting
-  const [isSplitting, setIsSplitting] = useState(false);
-  const [splitMembers, setSplitMembers] = useState([]);
-  const [poolMembers, setPoolMembers] = useState([]);
-  
-  // State for monthly tracking
-  const [filterDate, setFilterDate] = useState(new Date().toISOString().slice(0, 7));
+const GoalsPage = ({ db, user, allExpenses }) => {
+    const [userSettings, setUserSettings] = useState({ monthlyGoals: {}, achievements: [] });
+    const [thisMonthGoal, setThisMonthGoal] = useState({ income: 0, goal: 0 });
+    const [success, setSuccess] = useState('');
+    const appId = "1:608681523529:web:8f3bed536feada05224298";
+    const currentMonthKey = new Date().toISOString().slice(0, 7);
 
-
-  // Fetch user's pools
-  useEffect(() => {
-    if (!db || !userId) return;
-    const poolsRef = collection(db, `artifacts/${appId}/public/data/pools`);
-    const qPools = query(poolsRef, where("members", "array-contains", userId));
-    const unsubscribe = onSnapshot(qPools, (snapshot) => {
-        setPools(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    });
-    return () => unsubscribe();
-  }, [db, userId]);
-
-  // Fetch expenses for the selected pool/context
-  useEffect(() => {
-    if (!db || !userId) return;
-    
-    let expensesRef = currentPoolId === 'personal'
-      ? collection(db, `artifacts/${appId}/users/${userId}/expenses`)
-      : collection(db, `artifacts/${appId}/public/data/pools/${currentPoolId}/expenses`);
-      
-    const qExpenses = query(expensesRef);
-    const unsubscribe = onSnapshot(qExpenses, (snapshot) => {
-        const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).sort((a, b) => new Date(b.date) - new Date(a.date));
-        setAllExpenses(data);
-    }, (err) => { 
-        console.error("Error fetching expenses: ", err); 
-        setError("Failed to load expenses."); 
-    });
-    
-    return () => unsubscribe();
-  }, [db, userId, currentPoolId]);
-
-  // Fetch members of the current pool (for splitting)
-  useEffect(() => {
-    const fetchPoolMembers = async () => {
-        if (currentPoolId === 'personal') {
-            setPoolMembers([]);
-            return;
-        }
-
-        const currentPool = pools.find(p => p.id === currentPoolId);
-        if (currentPool && currentPool.members) {
-            try {
-                const usersRef = collection(db, `artifacts/${appId}/public/data/users`);
-                const q = query(usersRef, where(documentId(), 'in', currentPool.members));
-                const userDocs = await getDocs(q);
-                const members = userDocs.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                setPoolMembers(members);
-                setSplitMembers([userId]); // Reset split members to just self when pool changes
-            } catch (err) {
-                console.error("Error fetching pool members:", err);
+    useEffect(() => {
+        if (!db || !user) return;
+        const settingsRef = doc(db, `artifacts/${appId}/public/data/users`, user.uid);
+        const unsubscribe = onSnapshot(settingsRef, (doc) => {
+            if (doc.exists()) {
+                const data = doc.data();
+                setUserSettings(data);
+                if (data.monthlyGoals && data.monthlyGoals[currentMonthKey]) {
+                    setThisMonthGoal(data.monthlyGoals[currentMonthKey]);
+                } else {
+                    setThisMonthGoal({ income: 0, goal: 0 });
+                }
             }
+        });
+        return () => unsubscribe();
+    }, [db, user, appId, currentMonthKey]);
+
+    const handleGoalChange = (field, value) => {
+        setThisMonthGoal(prev => ({ ...prev, [field]: parseFloat(value) || 0 }));
+    };
+
+    const handleSaveGoal = async () => {
+        try {
+            const settingsRef = doc(db, `artifacts/${appId}/public/data/users`, user.uid);
+            await setDoc(settingsRef, {
+                monthlyGoals: {
+                    ...userSettings.monthlyGoals,
+                    [currentMonthKey]: thisMonthGoal
+                }
+            }, { merge: true });
+            setSuccess("Goal saved successfully!");
+            setTimeout(() => setSuccess(''), 2000);
+        } catch (err) {
+            console.error("Error saving goal:", err);
+        }
+    };
+
+    const expensesForMonth = useMemo(() => {
+        return allExpenses.filter(exp => exp.date.startsWith(currentMonthKey));
+    }, [allExpenses, currentMonthKey]);
+
+    const totalExpenses = useMemo(() => {
+        return expensesForMonth.reduce((sum, exp) => sum + exp.amount, 0);
+    }, [expensesForMonth]);
+
+    const savings = useMemo(() => thisMonthGoal.income - totalExpenses, [thisMonthGoal.income, totalExpenses]);
+    const goalMet = useMemo(() => thisMonthGoal.goal > 0 && savings >= thisMonthGoal.goal, [savings, thisMonthGoal.goal]);
+
+    useEffect(() => {
+        if (!db || !user || !goalMet) return;
+
+        const checkAndUnlockBadges = async () => {
+            const batch = writeBatch(db);
+            const achievementsRef = collection(db, `artifacts/${appId}/public/data/users/${user.uid}/achievements`);
+            const existingAchievementsSnapshot = await getDocs(achievementsRef);
+            const existingBadges = existingAchievementsSnapshot.docs.map(d => d.id);
+            let newBadgesUnlocked = [];
+
+            const awardBadge = (id, data) => {
+                const badgeKey = `${id}-${currentMonthKey}`;
+                if (!existingBadges.includes(badgeKey)) {
+                    const newBadgeRef = doc(achievementsRef, badgeKey);
+                    batch.set(newBadgeRef, data);
+                    newBadgesUnlocked.push(data.name);
+                }
+            };
+            
+            awardBadge('goal-smasher', { name: 'Goal Smasher', unlockedAt: new Date().toISOString() });
+
+            if (savings >= thisMonthGoal.goal * 2) {
+                awardBadge('overachiever', { name: 'Overachiever', unlockedAt: new Date().toISOString() });
+            }
+
+            if (savings - thisMonthGoal.goal < 100) {
+                awardBadge('barely-made-it', { name: 'Barely Made It', unlockedAt: new Date().toISOString() });
+            }
+            
+            const foodExpenses = expensesForMonth.filter(e => e.category === 'Food').reduce((sum, e) => sum + e.amount, 0);
+            if (foodExpenses > totalExpenses * 0.5 && totalExpenses > 0) {
+                awardBadge('foodie', { name: 'Foodie', unlockedAt: new Date().toISOString() });
+            }
+
+            if (newBadgesUnlocked.length > 0) {
+                await batch.commit();
+                alert(`New Badge(s) Unlocked: ${newBadgesUnlocked.join(', ')}!`);
+            }
+        };
+
+        checkAndUnlockBadges();
+    }, [goalMet, db, user, appId, currentMonthKey, savings, thisMonthGoal.goal, expensesForMonth, totalExpenses]);
+
+    return (
+        <div className="page-container">
+            <div className="card">
+                <h2>Your Financial Goals</h2>
+                <div className="goal-setup">
+                    <h3>{new Date().toLocaleString('default', { month: 'long', year: 'numeric' })} Goal</h3>
+                    <div className="input-group">
+                        <label>Monthly Income (₹)</label>
+                        <input type="number" value={thisMonthGoal.income || ''} onChange={(e) => handleGoalChange('income', e.target.value)} placeholder="e.g., 50000" />
+                    </div>
+                    <div className="input-group">
+                        <label>Monthly Savings Goal (₹)</label>
+                        <input type="number" value={thisMonthGoal.goal || ''} onChange={(e) => handleGoalChange('goal', e.target.value)} placeholder="e.g., 5000" />
+                    </div>
+                    {success && <p className="success-message centered">{success}</p>}
+                    <button onClick={handleSaveGoal} className="btn-primary full-width">Set Goal</button>
+                </div>
+                <div className="goal-progress">
+                    <h3>Progress</h3>
+                    <p>Income: ₹{thisMonthGoal.income.toFixed(2)}</p>
+                    <p>Expenses: ₹{totalExpenses.toFixed(2)}</p>
+                    <p>Savings: ₹{savings.toFixed(2)}</p>
+                    <div className="progress-bar-container">
+                        <div className="progress-bar" style={{ width: `${(savings / thisMonthGoal.goal) * 100}%` }}></div>
+                    </div>
+                    {goalMet && (
+                        <div className="achievement-unlocked">
+                            <TrophyIcon />
+                            <p>Congratulations! You've met your savings goal for the month!</p>
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// --- Helper Component for Expense Icons ---
+// Place this right before your DashboardPage component
+// --- ExpenseCategoryIcon Helper Component ---
+const ExpenseCategoryIcon = ({ category }) => {
+    const style = {
+        Food: { icon: <FaHamburger />, color: '#f97316' },
+        Transport: { icon: <FaCar />, color: '#3b82f6' },
+        Shopping: { icon: <FaShoppingBag />, color: '#8b5cf6' },
+        Bills: { icon: <FaFileInvoiceDollar />, color: '#ef4444' },
+        Entertainment: { icon: <FaFilm />, color: '#14b8a6' },
+        Other: { icon: <FaEllipsisH />, color: '#71717a' },
+    };
+    const categoryStyle = style[category] || style['Other'];
+
+    // convert hex to rgba for lighter background
+    const hexToRgba = (hex, alpha = 0.1) => {
+        const r = parseInt(hex.slice(1, 3), 16);
+        const g = parseInt(hex.slice(3, 5), 16);
+        const b = parseInt(hex.slice(5, 7), 16);
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    };
+
+    return (
+        <div
+            className="category-icon-container"
+            style={{
+                backgroundColor: hexToRgba(categoryStyle.color, 0.1),
+                color: categoryStyle.color,
+                borderRadius: "50%",
+                width: "36px",
+                height: "36px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+            }}
+        >
+            {categoryStyle.icon}
+        </div>
+    );
+};
+
+
+// --- Updated DashboardPage Component ---
+const DashboardPage = ({ db, user, allExpenses, pools }) => {
+    const userId = user.uid;
+    const [title, setTitle] = useState('');
+    const [amount, setAmount] = useState('');
+    const [category, setCategory] = useState('Food');
+    const [date, setDate] = useState(new Date().toISOString().slice(0, 16));
+    const [editingId, setEditingId] = useState(null);
+    const [showForm, setShowForm] = useState(false);
+    const [error, setError] = useState('');
+    const [currentPoolId, setCurrentPoolId] = useState('personal');
+    const [analysis, setAnalysis] = useState('');
+    const [analysisError, setAnalysisError] = useState('');
+    const [isAnalyzing, setIsAnalyzing] = useState(false);
+    const [isSuggesting, setIsSuggesting] = useState(false);
+    const appId = "1:608681523529:web:8f3bed536feada05224298";
+    const [isSplitting, setIsSplitting] = useState(false);
+    const [splitMembers, setSplitMembers] = useState([]);
+    const [poolMembers, setPoolMembers] = useState([]);
+    const [filterMonth, setFilterMonth] = useState(new Date().toISOString().slice(0, 7));
+    const [userSettings, setUserSettings] = useState({ location: '', budgets: {} });
+    const [showBudgetModal, setShowBudgetModal] = useState(false);
+    const [showLocationModal, setShowLocationModal] = useState(false);
+
+    const awardBadge = async (badgeId, badgeData) => {
+        const achievementRef = doc(db, `artifacts/${appId}/public/data/users/${userId}/achievements`, badgeId);
+        const docSnap = await getDoc(achievementRef);
+        if (!docSnap.exists()) {
+            await setDoc(achievementRef, badgeData);
+            alert(`New Badge Unlocked: ${badgeData.name}!`);
         }
     };
     
-    if(db && userId && pools.length > 0) {
-        fetchPoolMembers();
-    }
-  }, [db, userId, currentPoolId, pools]);
-  
+    const formattedAnalysis = useMemo(() => {
+        if (!analysis) return "";
+        return analysis
+            .replace(/^### (.*$)/gim, "<h3>$1</h3>")
+            .replace(/^## (.*$)/gim, "<h2>$1</h2>")
+            .replace(/^# (.*$)/gim, "<h1>$1</h1>")
+            .replace(/\*\*(.*?)\*\*/gim, "<strong>$1</strong>")
+            .replace(/\*(.*?)\*/gim, "<em>$1</em>")
+            .replace(/^\s*[-*] (.*$)/gim, "<li>$1</li>")
+            .replace(/\n/g, "<br/>");
+    }, [analysis]);
+
+    useEffect(() => {
+        if (!db || !userId) return;
+        const settingsRef = doc(db, `artifacts/${appId}/public/data/users`, userId);
+        const unsubscribe = onSnapshot(settingsRef, (doc) => {
+            if (doc.exists()) {
+                setUserSettings(doc.data());
+            }
+        });
+        return () => unsubscribe();
+    }, [db, userId, appId]);
+
+    useEffect(() => {
+        const fetchPoolMembers = async () => {
+            if (currentPoolId === 'personal') {
+                setPoolMembers([]);
+                return;
+            }
+            const currentPool = pools.find(p => p.id === currentPoolId);
+            if (currentPool && currentPool.members) {
+                try {
+                    const usersRef = collection(db, `artifacts/${appId}/public/data/users`);
+                    const q = query(usersRef, where(documentId(), 'in', currentPool.members));
+                    const userDocs = await getDocs(q);
+                    const members = userDocs.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    setPoolMembers(members);
+                    setSplitMembers([userId]);
+                } catch (err) {
+                    console.error("Error fetching pool members:", err);
+                }
+            }
+        };
+        if (db && userId && pools.length > 0) {
+            fetchPoolMembers();
+        }
+    }, [db, userId, currentPoolId, pools, appId]);
+
     const callGeminiAPI = async (systemPrompt, userPrompt) => {
         const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
-        const payload = { contents: [{ parts: [{ text: userPrompt }] }], systemInstruction: { parts: [{ text: systemPrompt }] } };
+        const payload = { 
+            contents: [{ parts: [{ text: userPrompt }] }], 
+            systemInstruction: { parts: [{ text: systemPrompt }] } 
+        };
         try {
-            const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            const response = await fetch(apiUrl, { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify(payload) 
+            });
             if (!response.ok) throw new Error(`API Error: ${response.statusText}`);
             const result = await response.json();
             return result.candidates?.[0]?.content?.parts?.[0]?.text || "";
@@ -629,18 +1166,63 @@ const MainApp = ({ db, user, auth }) => {
             return { error: "Failed to communicate with the AI. The API key may be missing or invalid." };
         }
     };
-    
+
     const expenses = useMemo(() => {
-        return allExpenses.filter(exp => exp.date.startsWith(filterDate));
-    }, [allExpenses, filterDate]);
+        const relevantExpenses = allExpenses.filter(exp => (exp.poolId || 'personal') === currentPoolId);
+        return relevantExpenses.filter(exp => exp.date.startsWith(filterMonth));
+    }, [allExpenses, filterMonth, currentPoolId]);
 
     const handleGetAnalysis = async () => {
-        if (expenses.length === 0) { setAnalysis("Not enough data to analyze."); return; }
-        setIsAnalyzing(true); setAnalysis(''); setAnalysisError('');
-        const systemPrompt = "You are a friendly financial assistant in India. Analyze expenses (in INR) and provide a brief, insightful summary of spending habits in 2-3 sentences. Then, offer two practical, actionable savings tips specific to Vellore, India. Format in Markdown with '## Summary' and '## Savings Tips' headings, and use '*' for list items.";
-        const userPrompt = `Here are the recent expenses: ${JSON.stringify(expenses.map(e => ({ title: e.title, amount: e.amount, category: e.category, date: e.date })))}`;
+        if (!userSettings.location) {
+            setShowLocationModal(true);
+            return;
+        }
+        if (expenses.length === 0) { 
+            setAnalysis("Not enough data for a coach to analyze."); 
+            return; 
+        }
+        setIsAnalyzing(true); 
+        setAnalysis(''); 
+        setAnalysisError('');
+
+        // Compute previous month
+        const [year, month] = filterMonth.split("-");
+        const prevDate = new Date(year, parseInt(month) - 2, 1); 
+        const prevMonth = prevDate.toISOString().slice(0, 7);
+
+        const prevExpenses = allExpenses.filter(
+            exp => (exp.poolId || 'personal') === currentPoolId && exp.date.startsWith(prevMonth)
+        );
+
+        const systemPrompt = `
+        You are FinADR, the user's personal Finance and Life Coach.
+        Tone: supportive, conversational, motivational.
+
+        Your response must include:
+        - **Strength**: One positive thing in their current spending habits.
+        - **Comparison to Last Month**: Highlight 1–2 key differences (savings or overspending).
+        - **Tips**: 2–3 highly specific suggestions (budgeting habit, lifestyle tweak, motivational note).
+
+        Format clearly into sections like a coaching journal.
+        End with a motivational one-liner.
+        `;
+
+        const userPrompt = `
+        My name is ${user.displayName}.
+        Location: ${userSettings.location}.
+        Budgets: ${JSON.stringify(userSettings.budgets)}.
+
+        This month’s expenses (${filterMonth}): 
+        ${JSON.stringify(expenses.map(e => ({ title: e.title, amount: e.amount, category: e.category })))}
+
+        Previous month’s expenses (${prevMonth}): 
+        ${JSON.stringify(prevExpenses.map(e => ({ title: e.title, amount: e.amount, category: e.category })))}
+
+        Compare both months and coach me.
+        `;
+
         const result = await callGeminiAPI(systemPrompt, userPrompt);
-        
+
         if (result.error) {
             setAnalysisError(result.error);
         } else {
@@ -648,494 +1230,523 @@ const MainApp = ({ db, user, auth }) => {
         }
         setIsAnalyzing(false);
     };
-    
+
     const handleSuggestCategory = async () => {
         if (!title.trim()) { setError("Please enter a title first."); return; }
         setIsSuggesting(true); setError('');
         const systemPrompt = "You are an expert expense categorizer. Based on the expense title, suggest the most appropriate category. Available categories: Food, Transport, Shopping, Bills, Entertainment, Other. Respond with ONLY the single most relevant category name.";
         const userPrompt = title.trim();
         const result = await callGeminiAPI(systemPrompt, userPrompt);
-        if (result && !result.error && ["Food", "Transport", "Shopping", "Bills", "Entertainment", "Other"].includes(result)) { 
-            setCategory(result); 
-        } else { 
-            setError("Could not suggest a category."); 
+        if (result && !result.error && CATEGORIES.includes(result)) {
+            setCategory(result);
+        } else {
+            setError("Could not suggest a category.");
         }
         setIsSuggesting(false);
     };
 
-  const validateForm = () => { 
-      const amountToValidate = parseFloat(amount);
-      if (!title.trim() || isNaN(amountToValidate) || amountToValidate <= 0 || !date) { 
-          setError('Please fill all fields with valid data.'); 
-          return false; 
-      }
-      if (isSplitting && splitMembers.length < 2) {
-          setError('Please select at least two members to split the bill.');
-          return false;
-      }
-      setError(''); 
-      return true; 
-  };
+    const validateForm = () => {
+        const amountToValidate = parseFloat(amount);
+        if (!title.trim() || isNaN(amountToValidate) || amountToValidate <= 0 || !date) {
+            setError('Please fill all fields with valid data.');
+            return false;
+        }
+        if (isSplitting && splitMembers.length < 2) {
+            setError('Please select at least two members to split the bill.');
+            return false;
+        }
+        setError('');
+        return true;
+    };
 
-  const handleSplitMemberToggle = (memberId) => {
-    setSplitMembers(prev => 
-        prev.includes(memberId) 
-            ? prev.filter(id => id !== memberId) 
-            : [...prev, memberId]
-    );
-  };
+    const handleSplitMemberToggle = (memberId) => {
+        setSplitMembers(prev => prev.includes(memberId) ? prev.filter(id => id !== memberId) : [...prev, memberId]);
+    };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault(); if (!validateForm() || !db || !user) return;
-    
-    const collectionPath = currentPoolId === 'personal' ? `artifacts/${appId}/users/${userId}/expenses` : `artifacts/${appId}/public/data/pools/${currentPoolId}/expenses`;
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        if (!validateForm() || !db || !user) return;
 
-    try {
-        if (isSplitting && currentPoolId !== 'personal') {
-            const batch = writeBatch(db);
-            const totalAmount = parseFloat(amount);
-            const amountPerPerson = totalAmount / splitMembers.length;
-            const splitGroupId = Date.now().toString();
+        if(allExpenses.length === 0) {
+            await awardBadge('first-drop', { name: 'First Drop', unlockedAt: new Date().toISOString() });
+        }
 
-            const payerData = poolMembers.find(m => m.id === userId);
-
-            splitMembers.forEach(memberId => {
-                const memberData = poolMembers.find(m => m.id === memberId);
-                const newExpenseRef = doc(collection(db, collectionPath));
-                batch.set(newExpenseRef, {
-                    title: `${title.trim()} (Split)`,
-                    amount: amountPerPerson,
-                    category,
-                    date,
-                    authorId: memberId, 
-                    authorName: memberData?.displayName || `User...${memberId.slice(-4)}`,
-                    paidById: userId,
-                    paidByName: payerData?.displayName || user.email,
-                    splitGroupId
+        const expenseHour = new Date(date).getHours();
+        if(expenseHour < 8) {
+            await awardBadge('early-bird', { name: 'Early Bird', unlockedAt: new Date().toISOString() });
+        }
+        
+        const collectionPath = currentPoolId === 'personal' ? 
+            `artifacts/${appId}/users/${userId}/expenses` : 
+            `artifacts/${appId}/public/data/pools/${currentPoolId}/expenses`;
+        try {
+            if (isSplitting && currentPoolId !== 'personal') {
+                const batch = writeBatch(db);
+                const totalAmount = parseFloat(amount);
+                const amountPerPerson = totalAmount / splitMembers.length;
+                const splitGroupId = Date.now().toString();
+                const payerData = poolMembers.find(m => m.id === userId);
+                splitMembers.forEach(memberId => {
+                    const memberData = poolMembers.find(m => m.id === memberId);
+                    const newExpenseRef = doc(collection(db, collectionPath));
+                    batch.set(newExpenseRef, {
+                        title: `${title.trim()} (Split)`,
+                        amount: amountPerPerson,
+                        category,
+                        date,
+                        authorId: memberId,
+                        authorName: memberData?.displayName || `User...${memberId.slice(-4)}`,
+                        paidById: userId,
+                        paidByName: payerData?.displayName || user.email,
+                        splitGroupId
+                    });
                 });
-            });
-            await batch.commit();
-        } else {
-             const expenseData = { title: title.trim(), amount: parseFloat(amount), category, date, authorId: userId, authorName: user.displayName || user.email };
-             if (editingId) { 
-                 await updateDoc(doc(db, collectionPath, editingId), expenseData); 
-             } else { 
-                 await addDoc(collection(db, collectionPath), expenseData); 
-             }
+                await batch.commit();
+            } else {
+                const expenseData = { title: title.trim(), amount: parseFloat(amount), category, date, authorId: userId, authorName: user.displayName || user.email };
+                if (editingId) {
+                    await updateDoc(doc(db, collectionPath, editingId), expenseData);
+                } else {
+                    await addDoc(collection(db, collectionPath), expenseData);
+                }
+            }
+            resetForm();
+        } catch (err) {
+            console.error("Error saving expense:", err);
+            setError(err.code === 'permission-denied' ? "Permission denied." : "Could not save the expense.");
         }
-      resetForm();
-    } catch (err) { 
-        console.error("Error saving expense:", err);
-        if (err.code === 'permission-denied') {
-            setError("Permission denied. You may not be a member of this pool or security rules are not set correctly.");
-        } else {
-            setError("Could not save the expense. Please try again.");
+    };
+
+    const handleDelete = async (id) => {
+        if (!db || !userId) return;
+        let docPath = currentPoolId === 'personal' ? 
+            `artifacts/${appId}/users/${userId}/expenses/${id}` : 
+            `artifacts/${appId}/public/data/pools/${currentPoolId}/expenses/${id}`;
+        try {
+            await deleteDoc(doc(db, docPath));
+        } catch (err) {
+            console.error("Error deleting expense:", err);
+            setError(err.code === 'permission-denied' ? "Permission denied." : "Could not delete the expense.");
         }
-    }
-  };
+    };
 
-  const handleDelete = async (id) => {
-    if (!db || !userId) return;
-    let docPath = currentPoolId === 'personal' ? `artifacts/${appId}/users/${userId}/expenses/${id}` : `artifacts/${appId}/public/data/pools/${currentPoolId}/expenses/${id}`;
-    try { 
-        await deleteDoc(doc(db, docPath)); 
-    } 
-    catch (err) { 
-        console.error("Error deleting expense:", err);
-        if (err.code === 'permission-denied') {
-            setError("Permission denied. You may not have permission to delete this expense.");
-        } else {
-            setError("Could not delete the expense. Please try again.");
+    const handleEdit = (expense) => {
+        if (expense.splitGroupId) {
+            setError("Splitting bills cannot be edited.");
+            setTimeout(() => setError(''), 3000);
+            return;
         }
-    }
-  };
+        setEditingId(expense.id);
+        setTitle(expense.title);
+        setAmount(expense.amount);
+        setCategory(expense.category);
+        setDate(expense.date.slice(0, 16));
+        setShowForm(true);
+        window.scrollTo(0, 0);
+    };
 
-  const handleEdit = (expense) => { 
-      if (expense.splitGroupId) {
-          setError("Splitting bills cannot be edited. Please delete and create a new one.");
-          setTimeout(() => setError(''), 3000);
-          return;
-      }
-      setEditingId(expense.id); 
-      setTitle(expense.title); 
-      setAmount(expense.amount); 
-      setCategory(expense.category); 
-      setDate(expense.date.slice(0, 16)); 
-      setShowForm(true); 
-      window.scrollTo(0, 0); 
-  };
-  const resetForm = () => { setTitle(''); setAmount(''); setCategory('Food'); setDate(new Date().toISOString().slice(0, 16)); setEditingId(null); setShowForm(false); setError(''); setIsSplitting(false); setSplitMembers([]); };
-  const toggleForm = () => showForm ? resetForm() : setShowForm(true);
-  const totalExpenses = useMemo(() => expenses.reduce((acc, exp) => acc + exp.amount, 0), [expenses]);
-  const expensesByCategory = useMemo(() => {
-      const categoryMap = expenses.reduce((acc, exp) => { acc[exp.category] = (acc[exp.category] || 0) + exp.amount; return acc; }, {});
-      return Object.entries(categoryMap).sort(([,a],[,b]) => b - a);
-  }, [expenses]);
-  const currentContextName = useMemo(() => { if (currentPoolId === 'personal') return "Personal Expenses"; const pool = pools.find(p => p.id === currentPoolId); return pool ? pool.name : "Loading Pool..."; }, [currentPoolId, pools]);
-  const formattedAnalysis = useMemo(() => {
-    if (!analysis) return '';
-    return analysis
-        .replace(/## (.*?)\n/g, '<h3>$1</h3>')
-        .replace(/\* (.*?)\n/g, '<li>$1</li>')
-        .replace(/\n/g, '<br/>');
-  }, [analysis]);
+    const resetForm = () => { 
+        setTitle(''); 
+        setAmount(''); 
+        setCategory('Food'); 
+        setDate(new Date().toISOString().slice(0, 16)); 
+        setEditingId(null); 
+        setShowForm(false); 
+        setError(''); 
+        setIsSplitting(false); 
+        setSplitMembers([]); 
+    };
 
+    const toggleForm = () => showForm ? resetForm() : setShowForm(true);
 
-  return (
-    <>
-      {showProfile && <ProfileModal auth={auth} db={db} onClose={() => setShowProfile(false)} />}
-      {showPools && <PoolsModal db={db} user={user} pools={pools} onClose={() => setShowPools(false)} onPoolLeave={() => setCurrentPoolId('personal')} />}
-      {showCollaborators && <CollaboratorsModal db={db} userId={userId} pools={pools} onClose={() => setShowCollaborators(false)} />}
+    const totalExpenses = useMemo(() => expenses.reduce((acc, exp) => acc + exp.amount, 0), [expenses]);
+    const expensesByCategory = useMemo(() => {
+        const categoryMap = expenses.reduce((acc, exp) => { 
+            acc[exp.category] = (acc[exp.category] || 0) + exp.amount; 
+            return acc; 
+        }, {});
+        return Object.entries(categoryMap).sort(([, a], [, b]) => b - a);
+    }, [expenses]);
 
-      <div id="main-app">
-        <div className="container">
-          <header className="app-header">
-              <div className="header-content">
-                   <div className="logo-container">
-                      <img src={Logo} alt="FinADR Logo" className="logo" />
-                      <h1>FinADR</h1>
-                  </div>
-                  <div className="header-actions">
-                      <button onClick={() => setShowProfile(true)} className="btn-icon" title="Profile"><UserIcon /></button>
-                      <button onClick={() => setShowPools(true)} className="btn-icon" title="Manage Pools"><CollectionIcon /></button>
-                      <button onClick={() => setShowCollaborators(true)} className="btn-icon" title="Collaborators"><UsersIcon/></button>
-                      <button onClick={() => signOut(auth)} className="btn-icon" title="Logout"><LogoutIcon /></button>
-                  </div>
-              </div>
-            <p>Welcome, {user.displayName || user.email}!</p>
-          </header>
-          <div className="context-switcher-container">
-             <select value={currentPoolId} onChange={e => setCurrentPoolId(e.target.value)} className="context-switcher">
-                <option value="personal">Personal Expenses</option>
-                {pools.map(pool => <option key={pool.id} value={pool.id}>{pool.name}</option>)}
-            </select>
-            <input type="month" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="month-picker" />
-          </div>
-          <div id="add-expense-btn-container">
-             <button onClick={toggleForm} className="btn-add-expense"><PlusIcon /></button>
-          </div>
-          {showForm && (
-            <div className="card form-card">
-              <h2>{editingId ? 'Edit Expense' : 'Add New Expense'} to {currentContextName}</h2>
-              <form onSubmit={handleSubmit}>
-                <input type="text" placeholder="Expense Title" value={title} onChange={(e) => setTitle(e.target.value)} required />
-                <div className="input-group">
-                  <select value={category} onChange={(e) => setCategory(e.target.value)}>
-                      <option>Food</option><option>Transport</option><option>Shopping</option><option>Bills</option><option>Entertainment</option><option>Other</option>
-                  </select>
-                  <button type="button" onClick={handleSuggestCategory} disabled={isSuggesting || !title} className="btn-suggest">{isSuggesting ? '...' : <><SparklesIcon /> Suggest</>}</button>
+    const currentContextName = useMemo(() => 
+        currentPoolId === 'personal' ? "Personal Expenses" : pools.find(p => p.id === currentPoolId)?.name || "Loading Pool...", 
+        [currentPoolId, pools]
+    );
+
+    return (
+        <>
+            {showBudgetModal && <BudgetModal db={db} userId={userId} userSettings={userSettings} onClose={() => setShowBudgetModal(false)} />}
+            {showLocationModal && <LocationModal db={db} userId={userId} onClose={(success) => { setShowLocationModal(false); if (success) handleGetAnalysis(); }} />}
+            
+            {/* Context Switcher */}
+            <div className="card context-switcher">
+                <div className="filter-group">
+                    <label htmlFor="month-select">Viewing Month:</label>
+                    <input
+                        type="month"
+                        id="month-select"
+                        value={filterMonth}
+                        max={new Date().toISOString().slice(0, 7)}
+                        onChange={(e) => setFilterMonth(e.target.value)}
+                    />
                 </div>
-                <input type="number" placeholder={isSplitting ? "Total Amount to Split" : "Amount"} value={amount} onChange={(e) => setAmount(e.target.value)} required min="0.01" step="0.01" />
-                <input type="datetime-local" value={date} onChange={(e) => setDate(e.target.value)} required />
-                
-                {currentPoolId !== 'personal' && !editingId && (
-                    <button type="button" onClick={() => setIsSplitting(!isSplitting)} className={`btn-secondary full-width ${isSplitting ? 'active' : ''}`}>
-                       <SplitIcon /> {isSplitting ? 'Cancel Split' : 'Split Bill'}
-                    </button>
-                )}
-
-                {isSplitting && (
-                    <div className="split-section">
-                        <h4>Split with:</h4>
-                        <div className="split-members-list">
-                            {poolMembers.map(member => (
-                                <label key={member.id} className="split-member-label">
-                                    <input type="checkbox" checked={splitMembers.includes(member.id)} onChange={() => handleSplitMemberToggle(member.id)} />
-                                    {member.displayName}
-                                </label>
-                            ))}
-                        </div>
-                        {splitMembers.length > 0 && amount > 0 && (
-                            <p className="split-result">
-                                Each pays: ₹{(parseFloat(amount) / splitMembers.length).toFixed(2)}
-                            </p>
-                        )}
-                    </div>
-                )}
-
-
-                {error && <p className="error-message centered">{error}</p>}
-                <div className="form-actions">
-                  <button type="button" onClick={resetForm} className="btn-secondary">Cancel</button>
-                  <button type="submit" className="btn-primary">{editingId ? 'Update' : 'Add'}</button>
+                <div className="filter-group">
+                    <label htmlFor="context-select">Viewing Expenses For:</label>
+                    <select 
+                      id="context-select" 
+                      value={currentPoolId} 
+                      onChange={(e) => setCurrentPoolId(e.target.value)}
+                    >
+                      <option value="personal">My Personal Expenses</option>
+                      {pools.map(pool => (
+                        <option key={pool.id} value={pool.id}>{pool.name}</option>
+                      ))}
+                    </select>
                 </div>
-              </form>
             </div>
-          )}
-          <div className="card">
-              <h2>Summary for {currentContextName} ({new Date(filterDate).toLocaleString('default', { month: 'long', year: 'numeric' })})</h2>
-              <div className="summary-content">
-                  <div className="summary-total"><span>Total Expenses:</span><span>₹{totalExpenses.toFixed(2)}</span></div>
-                  <hr/>
-                  <h3>By Category:</h3>
-                   <SpendingChart data={expensesByCategory} />
-                  {expensesByCategory.length > 0 ? (<ul>{expensesByCategory.map(([cat, total]) => (<li key={cat}><span>{cat}</span><span>₹{total.toFixed(2)}</span></li>))}</ul>) : (<p className="no-data">No expenses yet.</p>)}
-              </div>
-              <div className="ai-section">
-                  <button onClick={handleGetAnalysis} disabled={isAnalyzing} className="btn-primary full-width">{isAnalyzing ? 'Analyzing...' : <><SparklesIcon />Get Spending Insights</>}</button>
-                  {analysisError && <p className="error-message centered">{analysisError}</p>}
-                  {analysis && <div className="prose" dangerouslySetInnerHTML={{ __html: formattedAnalysis }} />}
-              </div>
-          </div>
-          <div className="card">
-            <h2>History for {currentContextName} ({new Date(filterDate).toLocaleString('default', { month: 'long', year: 'numeric' })})</h2>
-            {expenses.length === 0 ? (<p className="no-data">No expenses recorded. Tap '+' to add one!</p>) : (
-              <ul className="expense-list">
-                {expenses.map((expense, index) => (
-                  <li key={expense.id} className="expense-list-item" style={{ animationDelay: `${index * 50}ms` }}>
-                    <div className="expense-details">
-                      <p className="expense-title">{expense.title}</p>
-                      <p className="expense-meta">{expense.category} - {new Date(expense.date).toLocaleString()}</p>
-                      {currentPoolId !== 'personal' && <p className="expense-author">Added by: {expense.authorName}</p>}
-                       {expense.paidByName && <p className="expense-paid-by">Paid by: {expense.paidByName}</p>}
-                    </div>
-                    <div className="expense-actions">
-                      <p className="expense-amount">₹{expense.amount.toFixed(2)}</p>
-                      <button onClick={() => handleEdit(expense)} className="btn-icon btn-edit"><EditIcon /></button>
-                      <button onClick={() => handleDelete(expense.id)} className="btn-icon btn-delete"><DeleteIcon /></button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
+
+            {/* Add Expense Button */}
+            <div id="add-expense-btn-container">
+                <button onClick={toggleForm} className="btn-add-expense"><PlusIcon /></button>
+            </div>
+
+            {/* Expense Form */}
+            {showForm && (
+                <div className="card form-card">
+                    <h2>{editingId ? 'Edit Expense' : 'Add New Expense'} to {currentContextName}</h2>
+                    <form onSubmit={handleSubmit}>
+                        <input type="text" placeholder="Expense Title" value={title} onChange={(e) => setTitle(e.target.value)} required />
+                        <div className="input-group">
+                            <select value={category} onChange={(e) => setCategory(e.target.value)}>
+                                {CATEGORIES.map(c => <option key={c}>{c}</option>)}
+                            </select>
+                            <button type="button" onClick={handleSuggestCategory} disabled={isSuggesting || !title} className="btn-suggest">
+                                {isSuggesting ? '...' : <><SparklesIcon /> Suggest</>}
+                            </button>
+                        </div>
+                        <input type="number" placeholder={isSplitting ? "Total Amount to Split" : "Amount"} value={amount} onChange={(e) => setAmount(e.target.value)} required min="0.01" step="0.01" />
+                        <input type="datetime-local" value={date} onChange={(e) => setDate(e.target.value)} required />
+                        {currentPoolId !== 'personal' && !editingId && (
+                            <button type="button" onClick={() => setIsSplitting(!isSplitting)} className={`btn-secondary full-width btn-with-icon ${isSplitting ? 'active' : ''}`}>
+                                <SplitIcon /> {isSplitting ? 'Cancel Split' : 'Split Bill'}
+                            </button>
+                        )}
+                        {isSplitting && (
+                            <div className="split-section">
+                                <h4>Split with:</h4>
+                                <div className="split-members-list">
+                                    {poolMembers.map(member => (
+                                        <label key={member.id} className="split-member-label">
+                                            <input type="checkbox" checked={splitMembers.includes(member.id)} onChange={() => handleSplitMemberToggle(member.id)} />
+                                            {member.displayName}
+                                        </label>
+                                    ))}
+                                </div>
+                                {splitMembers.length > 0 && amount > 0 && (
+                                    <p className="split-result">
+                                        Each pays: ₹{(parseFloat(amount) / splitMembers.length).toFixed(2)}
+                                    </p>
+                                )}
+                            </div>
+                        )}
+                        {error && <p className="error-message centered">{error}</p>}
+                        <div className="form-actions">
+                            <button type="button" onClick={resetForm} className="btn-secondary">Cancel</button>
+                            <button type="submit" className="btn-primary">{editingId ? 'Update' : 'Add'}</button>
+                        </div>
+                    </form>
+                </div>
             )}
-          </div>
-        </div>
-        <style>{`
-          /* --- FinADR Global Styles --- */
-          * { box-sizing: border-box; margin: 0; padding: 0; }
-          body { font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; background-color: #000; color: #d4d4d8; }
-          
-          /* --- Animations --- */
-          @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-          @keyframes slideInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-          @keyframes popIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
-          @keyframes float { 0% { transform: translateY(0px); } 50% { transform: translateY(-10px); } 100% { transform: translateY(0px); } }
-          @keyframes pulse { 0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.7); } 70% { transform: scale(1.05); box-shadow: 0 0 10px 15px rgba(22, 163, 74, 0); } 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(22, 163, 74, 0); } }
-          @keyframes quirky-wobble { 0%, 100% { transform: rotate(0deg); } 25% { transform: rotate(5deg); } 75% { transform: rotate(-5deg); } }
-          @keyframes spin { to { transform: rotate(360deg); } }
+            
+            {/* Summary */}
+            <div className="card">
+                <h2>Summary for {currentContextName} ({new Date(filterMonth).toLocaleString('default', { month: 'long', year: 'numeric' })})</h2>
+                <div className="summary-content">
+                    <div className="summary-total"><span>Total Expenses:</span><span>₹{totalExpenses.toFixed(2)}</span></div>
+                    <hr />
+                    <h3>By Category:</h3>
+                    <SpendingChart data={expensesByCategory} />
+                    {expensesByCategory.length > 0 ? (
+                        <ul>
+                            {expensesByCategory.map(([cat, total]) => (
+                                <li key={cat}><span>{cat}</span><span>₹{total.toFixed(2)}</span></li>
+                            ))}
+                        </ul>
+                    ) : (
+                        <p className="no-data">No expenses yet.</p>
+                    )}
+                    <button onClick={() => setShowBudgetModal(true)} className="btn-secondary full-width btn-with-icon"><TargetIcon /> Set Budgets</button>
+                </div>
 
-          .floating { animation: float 3s ease-in-out infinite; }
-          .card, .form-card { animation: slideInUp 0.5s ease-out forwards; }
-          .expense-list-item { animation: slideInUp 0.4s ease-out forwards; opacity: 0; }
-          
-          /* --- Utility Classes --- */
-          .container { width: 100%; max-width: 640px; margin: auto; padding: 1rem; }
-          .card { background-color: #18181b; padding: 1.5rem; border-radius: 0.75rem; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05); margin-bottom: 1.5rem; }
-          .icon { width: 1.5rem; height: 1.5rem; } .icon-sm { width: 1.25rem; height: 1.25rem; }
-          .error-message { color: #ef4444; font-size: 0.875rem; } .error-message.centered { text-align: center; }
-          .success-message { color: #22c55e; font-size: 0.875rem; } .success-message.centered { text-align: center; }
-          .no-data { text-align: center; color: #71717a; padding: 1rem 0; }
-          
-          /* --- Buttons --- */
-          button { font-family: inherit; cursor: pointer; transition: all 0.2s ease-in-out; border: none; background: none; }
-          .btn-primary { background-color: #15803d; color: white; font-weight: 600; padding: 0.75rem 1rem; border-radius: 0.5rem; }
-          .btn-primary:hover { background-color: #166534; transform: translateY(-2px); box-shadow: 0 4px 10px rgba(22, 163, 74, 0.3); }
-          .btn-primary:disabled { background-color: #14532d; cursor: not-allowed; opacity: 0.6; }
-          .btn-primary.full-width { width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.5rem; }
-          .btn-secondary { background-color: #3f3f46; color: #e4e4e7; font-weight: 600; padding: 0.75rem 1rem; border-radius: 0.5rem; }
-          .btn-secondary:hover { background-color: #52525b; }
-          .btn-secondary.active { background-color: #166534; color: white; }
-          .btn-cta { background-color: #15803d; color: white; font-weight: bold; padding: 0.75rem 2rem; border-radius: 9999px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06); transition: transform 0.2s; }
-          .btn-cta:hover { background-color: #166534; transform: scale(1.05); animation: pulse 1.5s infinite; }
-          .btn-icon { color: #a1a1aa; padding: 0.25rem; border-radius: 9999px; display: flex; align-items: center; justify-content: center; }
-          .btn-icon:hover { color: white; background-color: #27272a; animation: quirky-wobble 0.5s; }
-          .btn-edit:hover { color: #22c55e; } .btn-delete:hover { color: #ef4444; }
-          .btn-add-expense { background-color: #15803d; color: white; border-radius: 9999px; padding: 1rem; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05); transition: transform 0.2s; }
-          .btn-add-expense:hover { background-color: #166534; transform: scale(1.1) rotate(90deg); }
-          .btn-suggest { background-color: rgba(16, 185, 129, 0.1); color: #6ee7b7; padding: 0.5rem 0.75rem; border-radius: 0.5rem; flex-shrink: 0; display: flex; align-items: center; gap: 0.25rem; }
-          .btn-suggest:hover { background-color: rgba(16, 185, 129, 0.2); } .btn-suggest:disabled { opacity: 0.5; }
-          .sparkles-icon { display: inline-block; margin-right: 0.25rem; }
-          .btn-leave-pool { font-size: 0.8rem; padding: 0.2rem 0.6rem; background-color: #ef4444; color: white; border-radius: 0.5rem; }
-          
-          /* --- Forms & Inputs --- */
-          input, select { width: 100%; padding: 0.75rem 1rem; background-color: #27272a; border: 1px solid #3f3f46; color: white; border-radius: 0.5rem; font-size: 1rem; transition: border-color 0.2s, box-shadow 0.2s; }
-          input:focus, select:focus { outline: none; border-color: #16a34a; box-shadow: 0 0 0 2px rgba(22, 163, 74, 0.5); }
-          .input-group { display: flex; gap: 0.5rem; align-items: center; }
-          
-          /* --- Screens --- */
-          #loading-screen { display: flex; flex-direction: column; min-height: 100vh; align-items: center; justify-content: center; padding: 2rem; }
-          .spinner { width: 48px; height: 48px; border: 5px solid #3f3f46; border-bottom-color: #22c55e; border-radius: 50%; display: inline-block; animation: spin 1s linear infinite; }
-          #welcome-screen, #auth-screen { display: flex; flex-direction: column; min-height: 100vh; align-items: center; justify-content: center; padding: 2rem; }
-          #welcome-screen { justify-content: flex-start; }
-          #welcome-screen nav { display: flex; justify-content: space-between; align-items: center; width: 100%; max-width: 1024px; }
-          .logo-container { display: flex; align-items: center; gap: 0.5rem; } .logo-sm { width: 2.5rem; height: 2.5rem; }
-          .app-name { font-size: 1.5rem; font-weight: bold; color: #22c55e; }
-          .nav-buttons { display: flex; gap: 0.5rem; }
-          #welcome-screen .hero-section { flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
-          #welcome-screen .hero-section h1 { font-size: 3rem; font-weight: bold; color: white; margin-bottom: 1rem; }
-          .tagline { font-size: 1.5rem; color: #a1a1aa; margin-bottom: 2rem; font-weight: 300;}
-          #welcome-screen .hero-section p { font-size: 1.125rem; color: #a1a1aa; max-width: 40rem; margin-bottom: 2rem; }
-          
-          /* Features Section */
-          .features-section { width: 100%; max-width: 1024px; margin: 4rem auto; }
-          .section-title { font-size: 2.25rem; font-weight: bold; text-align: center; margin-bottom: 2.5rem; color: white; }
-          .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.5rem; }
-          .feature-card { background-color: #18181b; padding: 2rem 1.5rem; border-radius: 0.75rem; text-align: center; border: 1px solid #27272a; transition: transform 0.2s, box-shadow 0.2s; }
-          .feature-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2); }
-          .feature-icon { margin: 0 auto 1rem auto; width: 3rem; height: 3rem; color: #22c55e; }
-          .feature-card h4 { font-size: 1.25rem; font-weight: 600; margin-bottom: 0.5rem; color: white; }
-          .feature-card p { color: #a1a1aa; line-height: 1.6; }
-          
-          footer { width: 100%; text-align: center; padding: 2rem 0; border-top: 1px solid #27272a; color: #71717a; }
+                {/* AI Coaching Section */}
+                <div className="ai-section">
+                    <button onClick={handleGetAnalysis} disabled={isAnalyzing} className="btn-primary full-width btn-with-icon">
+                        <SparklesIcon /> {isAnalyzing ? 'Analyzing...' : 'Get Personal Coaching'}
+                    </button>
+                    {analysisError && <p className="error-message">{analysisError}</p>}
+                    {analysis && (
+                        <div className="prose">
+                            <h3 style={{marginTop:'20px'}}>Your Personal Coaching Note</h3>
+                            <div dangerouslySetInnerHTML={{ __html: formattedAnalysis }} />
+                        </div>
+                    )}
+                </div>
+            </div>
 
-
-          .auth-container { width: 100%; max-width: 24rem; }
-          .logo-container-large { display: flex; justify-content: center; margin-bottom: 1.5rem; } .logo-lg { width: 5rem; height: 5rem; }
-          #auth-screen h1 { font-size: 1.875rem; font-weight: bold; color: #22c55e; text-align: center; margin-bottom: 0.5rem; }
-          #auth-screen p { color: #a1a1aa; text-align: center; margin-bottom: 2rem; }
-          .auth-form { background-color: #18181b; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); border-radius: 0.75rem; padding: 2rem; display: flex; flex-direction: column; gap: 1.5rem; }
-          .auth-toggle { text-align: center; color: #71717a; font-size: 0.875rem; margin-top: 1.5rem; }
-          .auth-toggle button { font-weight: 600; color: #22c55e; margin-left: 0.25rem; }
-          .auth-toggle button:hover { color: #4ade80; }
-
-          /* --- Main App Layout --- */
-          #main-app { font-family: sans-serif; color: #d4d4d8; }
-          .app-header { background-color: #18181b; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); border-radius: 0.75rem; padding: 1.5rem; margin-bottom: 1.5rem; border-bottom: 4px solid #166534; }
-          .header-content { display: flex; justify-content: space-between; align-items: center; }
-          .app-header .logo-container { gap: 0.75rem; }
-          .app-header .logo { width: 3rem; height: 3rem; }
-          .app-header h1 { font-size: 1.875rem; font-weight: bold; color: #22c55e; }
-          .header-actions { display: flex; align-items: center; gap: 0.75rem; }
-          .app-header p { text-align: left; color: #a1a1aa; margin-top: 0.25rem; }
-          .header-pfp { width: 2rem; height: 2rem; border-radius: 9999px; object-fit: cover; }
-
-          /* Main Content */
-          .context-switcher-container { display: flex; gap: 1rem; margin-bottom: 1.5rem; }
-          .context-switcher, .month-picker { flex-grow: 1; }
-          #add-expense-btn-container { position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 10; }
-          .form-card { animation: fadeIn 0.5s ease-out forwards; }
-          .form-card h2, .card h2 { font-size: 1.5rem; font-weight: 600; margin-bottom: 1rem; color: white; }
-          .form-card form { display: flex; flex-direction: column; gap: 1rem; }
-          .form-actions { display: flex; justify-content: flex-end; gap: 0.75rem; }
-
-          /* --- Bill Splitting --- */
-          .split-section { border-top: 1px solid #3f3f46; margin-top: 1rem; padding-top: 1rem; }
-          .split-section h4 { font-weight: 600; margin-bottom: 0.5rem; }
-          .split-members-list { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem; margin-bottom: 1rem; }
-          .split-member-label { display: flex; align-items: center; gap: 0.5rem; background-color: #27272a; padding: 0.5rem; border-radius: 0.5rem; cursor: pointer; }
-          .split-member-label input { width: auto; }
-          .split-result { text-align: center; font-weight: 600; color: #22c55e; margin-top: 0.5rem; }
-
-
-          /* Summary & Chart */
-          .summary-content { display: flex; flex-direction: column; gap: 0.75rem; }
-          .summary-total { display: flex; justify-content: space-between; align-items: center; font-size: 1.125rem; }
-          .summary-total span:first-child { font-weight: 500; color: #d4d4d8; }
-          .summary-total span:last-child { font-weight: bold; color: #22c55e; font-size: 1.25rem; }
-          .summary-content hr { border-color: #3f3f46; }
-          .summary-content h3 { font-weight: 600; padding-top: 0.5rem; color: #d4d4d8; }
-          .summary-content ul { display: flex; flex-direction: column; gap: 0.5rem; list-style: none; }
-          .summary-content li { display: flex; justify-content: space-between; align-items: center; }
-          .summary-content li span:last-child { font-weight: 600; }
-          .chart-container { position: relative; height: 250px; width: 100%; margin-bottom: 1.5rem; }
-          .ai-section { margin-top: 1rem; border-top: 1px solid #3f3f46; padding-top: 1rem; }
-          .prose { margin-top: 1rem; padding: 1rem; background-color: #27272a; border-radius: 0.5rem; font-size: 0.875rem; line-height: 1.5; }
-          .prose h3 { font-size: 1.1em; color: white; margin-bottom: 0.5rem; }
-          .prose li { margin-left: 1rem; }
-          
-          /* History List */
-          .expense-list { display: flex; flex-direction: column; gap: 0.75rem; list-style: none; }
-          .expense-list-item { display: flex; align-items: center; justify-content: space-between; padding: 1rem; background-color: rgba(39, 39, 42, 0.5); border-radius: 0.5rem; transition: background-color 0.2s; opacity: 0; }
-          .expense-list-item:hover { background-color: #27272a; }
-          .expense-details { flex-grow: 1; }
-          .expense-title { font-weight: bold; font-size: 1.125rem; color: #f4f4f5; }
-          .expense-meta { font-size: 0.875rem; color: #a1a1aa; }
-          .expense-author { font-size: 0.75rem; color: #a1a1aa; padding-top: 0.25rem; }
-          .expense-paid-by { font-size: 0.75rem; color: #6ee7b7; padding-top: 0.25rem; font-style: italic; }
-          .expense-actions { display: flex; align-items: center; gap: 0.75rem; }
-          .expense-amount { font-size: 1.125rem; font-weight: 600; color: #f4f4f5; }
-
-          /* --- Modals --- */
-          .modal-overlay { position: fixed; inset: 0; background-color: rgba(0,0,0,0.6); z-index: 50; display: flex; justify-content: center; align-items: center; padding: 1rem; }
-          .modal-content { background-color: #18181b; border-radius: 0.75rem; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); width: 100%; max-width: 28rem; border: 1px solid #3f3f46; animation: popIn 0.3s ease-out; }
-          .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.5rem; border-bottom: 1px solid #27272a; }
-          .modal-header h2 { font-size: 1.25rem; font-weight: 600; color: white; }
-          .modal-body { padding: 1.5rem; }
-          .profile-modal-body, .pools-modal-body { display: flex; flex-direction: column; gap: 1rem; }
-          .profile-modal-body label { font-weight: 500; font-size: 0.875rem; color: #a1a1aa; }
-          .username-display { text-align: center; color: #a1a1aa; font-style: italic; margin-bottom: 1rem; }
-          .modal-actions { display: flex; justify-content: flex-end; }
-          
-          /* Pools Modal */
-          .pools-modal-body { gap: 1.5rem; }
-          .pool-action-group h3 { font-size: 1.125rem; font-weight: 600; color: white; margin-bottom: 0.5rem; }
-          .pool-list-container { display: flex; flex-direction: column; gap: 0.5rem; }
-          .pool-list-container > h3 { font-size: 1.125rem; font-weight: 600; color: white; margin-bottom: 0.5rem; }
-          .pool-list-container ul { display: flex; flex-direction: column; gap: 0.5rem; max-height: 10rem; overflow-y: auto; list-style: none; }
-          .pool-list-container > ul > li { background-color: #27272a; padding: 0.75rem; border-radius: 0.5rem; }
-          .pool-header { display: flex; justify-content: space-between; align-items: center; }
-          .pool-name { font-weight: 600; }
-          .pool-id { font-size: 0.75rem; color: #a1a1aa; cursor: pointer; }
-          .pool-id:hover { color: white; }
-          .pool-members { margin-top: 0.5rem; }
-          .pool-members h4 { font-size: 0.875rem; color: #a1a1aa; margin-bottom: 0.25rem; }
-          .pool-members ul { list-style: none; padding-left: 0; color: #d4d4d8; font-size: 0.875rem; }
-          .member-item { display: flex; align-items: center; gap: 0.5rem; padding: 0.25rem 0; }
-          
-          /* Collaborators Modal */
-          .collaborators-list ul { list-style: none; display: flex; flex-direction: column; gap: 0.75rem; max-height: 40vh; overflow-y: auto; }
-          .collaborators-list li { display: flex; align-items: center; gap: 0.75rem; background-color: #27272a; padding: 0.5rem; border-radius: 0.5rem; }
-          .collaborators-list li span { font-weight: 600; }
-      `}</style>
-      </div>
-    </>
-  );
+            {/* Expenses List */}
+            <div className="card">
+                <h2>History for {currentContextName}</h2>
+                {expenses.length === 0 ? (
+                    <p className="no-data">No expenses recorded. Tap '+' to add one!</p>
+                ) : (
+                    <div className="expense-list-container">
+                        {Object.entries(
+                            expenses.reduce((acc, expense) => {
+                                const date = new Date(expense.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+                                if (!acc[date]) {
+                                    acc[date] = [];
+                                }
+                                acc[date].push(expense);
+                                return acc;
+                            }, {})
+                        ).map(([date, dailyExpenses]) => (
+                            <div key={date}>
+                                <div className="expense-group-header">{date}</div>
+                                <ul className="expense-list">
+                                    {dailyExpenses.map((expense, index) => (
+                                        <li key={expense.id} className="expense-list-item" style={{ animationDelay: `${index * 50}ms` }}>
+                                            <ExpenseCategoryIcon category={expense.category} />
+                                            <div className="expense-details">
+                                                <p className="expense-title">{expense.title}</p>
+                                                <p className="expense-meta">
+                                                    {new Date(expense.date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                                                    {expense.authorName && ` by ${expense.authorName}`}
+                                                </p>
+                                            </div>
+                                            <div className="expense-actions">
+                                                <p className="expense-amount">₹{expense.amount.toFixed(2)}</p>
+                                                <button onClick={() => handleEdit(expense)} className="btn-icon btn-edit"><EditIcon /></button>
+                                                <button onClick={() => handleDelete(expense.id)} className="btn-icon btn-delete"><DeleteIcon /></button>
+                                            </div>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+        </>
+    );
 };
+
 
 // --- App Controller Component ---
 export default function App() {
-  const [view, setView] = useState('welcome');
-  const [authInitialMode, setAuthInitialMode] = useState('login');
-  const [auth, setAuth] = useState(null);
-  const [db, setDb] = useState(null);
-  const [storage, setStorage] = useState(null);
-  const [user, setUser] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  
-  useEffect(() => {
-    const chartScriptId = 'chartjs-script';
-    if (!document.getElementById(chartScriptId)) {
-        const script = document.createElement('script');
-        script.id = chartScriptId;
-        script.src = "https://cdn.jsdelivr.net/npm/chart.js";
-        script.async = true;
-        document.body.appendChild(script);
-    }
-      
-    try {
-      const app = initializeApp(firebaseConfig);
-      const authInstance = getAuth(app);
-      const firestore = getFirestore(app);
-      const storageInstance = getStorage(app);
-      setDb(firestore); 
-      setAuth(authInstance); 
-      setStorage(storageInstance);
-      setLogLevel('debug');
+    const [view, setView] = useState('welcome');
+    const [authInitialMode, setAuthInitialMode] = useState('login');
+    const [auth, setAuth] = useState(null);
+    const [db, setDb] = useState(null);
+    const [user, setUser] = useState(null);
+    const [isLoading, setIsLoading] = useState(true);
 
-      const unsubscribe = onAuthStateChanged(authInstance, (user) => {
-        setUser(user);
-        if (user) { 
-            setView('app'); 
-        } else { 
-            setView('welcome'); 
+    useEffect(() => {
+        try {
+            const app = initializeApp(firebaseConfig);
+            const authInstance = getAuth(app);
+            const firestore = getFirestore(app);
+            setDb(firestore);
+            setAuth(authInstance);
+            setLogLevel('debug');
+            const unsubscribe = onAuthStateChanged(authInstance, (user) => {
+                setUser(user);
+                setView(user ? 'app' : 'welcome');
+                setIsLoading(false);
+            });
+            return () => unsubscribe();
+        } catch (e) {
+            console.error("Firebase initialization failed:", e);
+            setIsLoading(false);
         }
-        setIsLoading(false);
-      });
-      return () => unsubscribe();
-    } catch (e) { console.error("Firebase initialization failed:", e); setIsLoading(false); }
-  }, []);
+    }, []);
 
-  const handleNavigate = (targetView, mode = 'login') => { setAuthInitialMode(mode); setView(targetView); };
-  
-  if (isLoading) { return <div id="loading-screen"><div className="spinner"></div></div>; }
-  
-  switch(view) {
-    case 'app':
-        return user ? <MainApp db={db} user={user} auth={auth} storage={storage} /> : <WelcomeScreen onNavigate={handleNavigate} />;
-    case 'auth':
-        return <AuthScreen auth={auth} db={db} initialMode={authInitialMode} />;
-    default:
-        return <WelcomeScreen onNavigate={handleNavigate} />;
-  }
+    useEffect(() => {
+        if (!user || !db) return;
+        const app = getAuth().app;
+        const messaging = getMessaging(app);
+        Notification.requestPermission().then((permission) => {
+            if (permission === 'granted') {
+                const vapidKey = 'YOUR_VAPID_KEY_FROM_FIREBASE_SETTINGS'; // IMPORTANT: Replace this key
+                getToken(messaging, { vapidKey: vapidKey }).then(async (currentToken) => {
+                    if (currentToken) {
+                        const userProfileRef = doc(db, `artifacts/${firebaseConfig.appId}/public/data/users`, user.uid);
+                        await setDoc(userProfileRef, { fcmToken: currentToken }, { merge: true });
+                    }
+                }).catch((err) => {
+                    console.log('An error occurred while retrieving token. ', err);
+                });
+            }
+        });
+        onMessage(messaging, (payload) => {
+            alert(payload.notification.title + "\n" + payload.notification.body);
+        });
+    }, [user, db]);
+
+    const handleNavigate = (targetView, mode = 'login') => {
+        setAuthInitialMode(mode);
+        setView(targetView);
+    };
+
+    if (isLoading) {
+        return <div id="loading-screen"><div className="spinner"></div></div>;
+    }
+
+    const AppContent = () => {
+        const [currentPage, setCurrentPage] = useState('dashboard');
+        const [isNavOpen, setIsNavOpen] = useState(false);
+        const [pools, setPools] = useState([]);
+        const [allExpenses, setAllExpenses] = useState([]);
+        const appId = "1:608681523529:web:8f3bed536feada05224298";
+        const userId = user.uid;
+
+        useEffect(() => {
+            if (!db || !userId) return;
+            const poolsRef = collection(db, `artifacts/${appId}/public/data/pools`);
+            const qPools = query(poolsRef, where("members", "array-contains", userId));
+            const unsubscribe = onSnapshot(qPools, (snapshot) => {
+                setPools(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+            });
+            return () => unsubscribe();
+        }, [db, userId, appId]);
+
+        useEffect(() => {
+            if (!db || !userId) return;
+            const personalExpensesRef = collection(db, `artifacts/${appId}/users/${userId}/expenses`);
+            const unsubPersonal = onSnapshot(personalExpensesRef, (snapshot) => {
+                const personalData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), poolId: 'personal' }));
+                setAllExpenses(prev => [...prev.filter(exp => exp.poolId !== 'personal'), ...personalData]);
+            });
+            const poolUnsubs = pools.map(pool => {
+                const poolExpensesRef = collection(db, `artifacts/${appId}/public/data/pools/${pool.id}/expenses`);
+                return onSnapshot(poolExpensesRef, (snapshot) => {
+                    const poolData = snapshot.docs.map(doc => ({ id: doc.id, poolId: pool.id, ...doc.data() }));
+                    setAllExpenses(prev => [...prev.filter(exp => exp.poolId !== pool.id), ...poolData]);
+                });
+            });
+            return () => {
+                unsubPersonal();
+                poolUnsubs.forEach(unsub => unsub());
+            };
+        }, [db, userId, pools, appId]);
+
+        let pageComponent;
+        switch (currentPage) {
+            case 'dashboard':
+                pageComponent = <DashboardPage db={db} user={user} auth={auth} allExpenses={allExpenses} pools={pools} />;
+                break;
+            case 'achievements':
+                pageComponent = <AchievementsPage db={db} userId={userId} />;
+                break;
+            case 'pools':
+                pageComponent = <PoolsPage db={db} user={user} pools={pools} onPoolLeave={() => setCurrentPage('dashboard')} />;
+                break;
+            case 'goals':
+                pageComponent = <GoalsPage db={db} user={user} allExpenses={allExpenses} />;
+                break;
+            case 'profile':
+                pageComponent = <ProfilePage auth={auth} db={db} />;
+                break;
+            default:
+                pageComponent = <DashboardPage db={db} user={user} auth={auth} allExpenses={allExpenses} pools={pools} />;
+        }
+
+        return (
+            <div id="main-app">
+                <header className="app-header">
+                    <div className="header-content">
+                        <button
+                            className="btn-icon hamburger-btn"
+                            onClick={() => setIsNavOpen(!isNavOpen)}
+                            aria-label="Toggle navigation menu"
+                        >
+                            <MenuIcon />
+                        </button>
+                        <div className="logo-container">
+                            <img src={Logo} alt="FinADR Logo" className="logo" />
+                            <h1>FinADR</h1>
+                        </div>
+                        <button
+                            onClick={() => signOut(auth)}
+                            className="btn-icon"
+                            title="Logout"
+                            aria-label="Logout"
+                        >
+                            <LogoutIcon />
+                        </button>
+                    </div>
+                </header>
+                <nav className={`nav-drawer ${isNavOpen ? 'open' : ''}`}>
+                    <div className="nav-header">
+                        <div className="logo-container">
+                            <img src={Logo} alt="FinADR Logo" className="logo-sm" />
+                            <span className="app-name">FinADR</span>
+                        </div>
+                    </div>
+                    <div className="nav-menu">
+                        <button
+                            className={currentPage === 'dashboard' ? 'nav-btn active' : 'nav-btn'}
+                            onClick={() => { setCurrentPage('dashboard'); setIsNavOpen(false); }}
+                        >
+                            <HomeIcon />
+                            <span>Dashboard</span>
+                        </button>
+                        <button
+                            className={currentPage === 'achievements' ? 'nav-btn active' : 'nav-btn'}
+                            onClick={() => { setCurrentPage('achievements'); setIsNavOpen(false); }}
+                        >
+                            <AwardIcon />
+                            <span>Achievements</span>
+                        </button>
+                        <button
+                            className={currentPage === 'pools' ? 'nav-btn active' : 'nav-btn'}
+                            onClick={() => { setCurrentPage('pools'); setIsNavOpen(false); }}
+                        >
+                            <UsersIcon />
+                            <span>Pools</span>
+                        </button>
+                        <button
+                            className={currentPage === 'goals' ? 'nav-btn active' : 'nav-btn'}
+                            onClick={() => { setCurrentPage('goals'); setIsNavOpen(false); }}
+                        >
+                            <TargetIcon />
+                            <span>Goals</span>
+                        </button>
+                        <button
+                            className={currentPage === 'profile' ? 'nav-btn active' : 'nav-btn'}
+                            onClick={() => { setCurrentPage('profile'); setIsNavOpen(false); }}
+                        >
+                            <UserIcon />
+                            <span>Profile</span>
+                        </button>
+                    </div>
+                </nav>
+                <div
+                    className={`nav-overlay ${isNavOpen ? 'open' : ''}`}
+                    onClick={() => setIsNavOpen(false)}
+                ></div>
+                <main className="container">
+                    {pageComponent}
+                </main>
+            </div>
+        );
+    };
+
+    switch (view) {
+        case 'app':
+            return user ? <AppContent /> : <WelcomeScreen onNavigate={handleNavigate} />;
+        case 'auth':
+            return <AuthScreen auth={auth} db={db} initialMode={authInitialMode} />;
+        default:
+            return <WelcomeScreen onNavigate={handleNavigate} />;
+    }
 }
-
