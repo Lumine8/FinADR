@@ -130,18 +130,11 @@ const DashboardPage = ({ db, user, allExpenses, pools, categories }) => {
     }, [db, userId, currentPoolId, pools, appId]);
 
     const callGeminiAPI = async (systemPrompt, userPrompt) => {
-        const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+        const apiKey = import.meta.env.VITE_GEMINI_API_KEY;; 
         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
-        const payload = { 
-            contents: [{ parts: [{ text: userPrompt }] }], 
-            systemInstruction: { parts: [{ text: systemPrompt }] } 
-        };
+        const payload = { contents: [{ parts: [{ text: userPrompt }] }], systemInstruction: { parts: [{ text: systemPrompt }] } };
         try {
-            const response = await fetch(apiUrl, { 
-                method: 'POST', 
-                headers: { 'Content-Type': 'application/json' }, 
-                body: JSON.stringify(payload) 
-            });
+            const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
             if (!response.ok) throw new Error(`API Error: ${response.statusText}`);
             const result = await response.json();
             return result.candidates?.[0]?.content?.parts?.[0]?.text || "";
