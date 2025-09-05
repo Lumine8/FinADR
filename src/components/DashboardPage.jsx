@@ -36,6 +36,7 @@ const ExpenseCategoryIcon = ({ category }) => {
                 borderRadius: "50%",
                 width: "36px",
                 height: "36px",
+                
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",

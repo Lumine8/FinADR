@@ -659,3 +659,56 @@ body.dark-mode .profile-achievements h3 {
 .toggle-btn:not(.active) {
   transform: translateY(0);
 }
+/* Category Icon Container - Complementary styles for inline-styled component */
+.category-icon-container {
+  transition: all 0.3s ease;
+  cursor: pointer;
+  position: relative;
+  margin-right: 10px;
+}
+
+/* Hover effects */
+.category-icon-container:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Focus states for accessibility */
+.category-icon-container:focus {
+  outline: 2px solid var(--primary-color, #166534);
+  outline-offset: 2px;
+}
+
+/* Animation for when icons appear */
+.category-icon-container {
+  animation: fadeInScale 0.3s ease-out;
+}
+
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Dark theme adjustments */
+[data-theme="dark"] .category-icon-container:hover {
+  box-shadow: 0 4px 12px rgba(22, 101, 52, 0.2);
+}
+
+/* Responsive sizing */
+@media (max-width: 768px) {
+  .category-icon-container {
+    width: 32px !important;
+    height: 32px !important;
+  }
+}
+
+/* Optional: Add subtle border */
+.category-icon-container {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
