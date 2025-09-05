@@ -123,6 +123,13 @@ const ProfilePage = ({ auth, db }) => {
         return <p className="profile-tagline">{quote}</p>;
     };
 
+    // Open Google Form in new tab
+    const handleFeedbackClick = () => {
+        // Replace this URL with your actual Google Form link
+        const googleFormURL = "https://forms.gle/uH5D3WuZi7EA3Abz5";
+        window.open(googleFormURL, "_blank", "noopener,noreferrer");
+    };
+
     return (
         <div className="profile-page">
             <div className="card profile-header">
@@ -168,6 +175,16 @@ const ProfilePage = ({ auth, db }) => {
                     </ul>
                 )}
             </div>
+
+            {/* Feedback Button Section */}
+            <div className="card profile-feedback">
+                <h3>We Value Your Feedback</h3>
+                <p>If you have a moment, please help us improve FinADR by sharing your thoughts.</p>
+                <button className="btn-secondary" onClick={handleFeedbackClick}>
+                    Give Feedback
+                </button>
+            </div>
+
         </div>
     );
 };

@@ -110,7 +110,9 @@ const AchievementsPage = ({ db, userId }) => {
 
     return (
         <div className="page-container">
+          <p style={{fontSize:'10px', textAlign:"center"}}>{"{Achievements-page under construction}"}</p>
             <div className="card">
+
                 <h2>All Achievements</h2>
                 <p className="subtitle">Track your progress and unlock all the badges!</p>
                 
