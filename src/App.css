@@ -549,51 +549,113 @@ body.dark-mode .profile-achievements h3 {
 .card:nth-child(3) { animation-delay: 0.3s; }
 .card:nth-child(4) { animation-delay: 0.4s; }
 
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+:root {
+  /* Backgrounds */
+  --bg-primary: #000000;
+  --bg-secondary: #27272a;
+  --bg-tertiary: #111111;
+  --bg-card: #0f0f0f;
+  
+  /* Text Colors */
+  --text-primary: #1e8a47;
+  --text-secondary: #1e8a47;
+  --text-muted: #1e8a47;
+  --text-inverse: #ffffff;
+  
+  /* Border Colors */
+  --border-color: #27272a;
+  --border-hover: #166534;
+  --border-focus: #166534;
+  
+  /* Primary Colors (Dark Green) */
+  --primary-color: #1e8a47;
+  --primary-dark: #1e8a47;
+  --primary-light: #1e8a47;
+  --primary-bg: rgba(22, 101, 52, 0.1);
+  
+  /* Success/Error States */
+  --success-color: #166534;
+  --error-color: #ff073a;
+  --warning-color: #ffb800;
+  
+  /* Shadows */
+  --shadow-sm: 0 2px 4px rgba(22, 101, 52, 0.1);
+  --shadow-md: 0 4px 8px rgba(22, 101, 52, 0.15);
+  --shadow-lg: 0 8px 16px rgba(22, 101, 52, 0.2);
+  
+  /* Glows */
+  --glow-primary: 0 0 10px rgba(22, 101, 52, 0.3);
+  --glow-secondary: 0 0 20px rgba(22, 101, 52, 0.2);
 }
 
-
-
-@keyframes typing {
-  from { width: 0 }
-  to { width: 100% }
+/* Filter Toggle Component */
+.filter-toggle {
+  display: flex;
+  background: var(--bg-secondary);
+  border-radius: 12px;
+  padding: 4px;
+  margin: 20px 0;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-color);
+  overflow: hidden;
 }
 
-@keyframes blink {
-  from, to { border-color: transparent }
-  50% { border-color: #16a34a }
-}
-
-/* Progress bar fill animation */
-.progress-fill {
-  height: 12px;
+.toggle-btn {
+  flex: 1;
+  padding: 12px 20px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-weight: 500;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s ease;
   border-radius: 8px;
-  background-color: #16a34a;
-  width: 0;
-  animation: fillBar 2s ease forwards;
+  position: relative;
+  white-space: nowrap;
 }
 
-@keyframes fillBar {
-  from { width: 0 }
-  to { width: var(--progress-width, 100%); }
+.toggle-btn:hover {
+  color: var(--primary-light);
+  background: var(--primary-bg);
+  box-shadow: var(--glow-primary);
 }
 
-/* Achievements glow pulse */
-.profile-achievements li {
-  list-style: none;
-  margin: 8px 0;
-  animation: pulseGlow 2s infinite alternate;
+.toggle-btn.active {
+  background: var(--primary-color);
+  color: var(--text-inverse);
+  box-shadow: var(--glow-secondary);
+  transform: translateY(-1px);
 }
 
-@keyframes pulseGlow {
-  from { text-shadow: 0 0 2px rgba(255,215,0,0.3); }
-  to { text-shadow: 0 0 10px rgba(255,215,0,0.8); }
+.toggle-btn.active:hover {
+  background: var(--primary-dark);
+  color: var(--text-inverse);
+}
+
+/* Responsive design for smaller screens */
+@media (max-width: 768px) {
+  .filter-toggle {
+    margin: 16px 0;
+  }
+  
+  .toggle-btn {
+    padding: 10px 16px;
+    font-size: 13px;
+  }
+}
+
+/* Focus states for accessibility */
+.toggle-btn:focus {
+  outline: none;
+  box-shadow: var(--glow-primary);
+}
+
+.toggle-btn:focus:not(.active) {
+  background: var(--primary-bg);
+}
+
+/* Smooth animation when switching between states */
+.toggle-btn:not(.active) {
+  transform: translateY(0);
 }
