@@ -4,6 +4,7 @@ import { IconComponents } from './IconComponents';
 import BudgetModal from './BudgetModal';
 import LocationModal from './LocationModal';
 import SpendingChart from './SpendingChart';
+import AdBanner from "./AdBanner";
 import { FaHamburger, FaCar, FaShoppingBag, FaFileInvoiceDollar, FaFilm, FaEllipsisH } from "react-icons/fa";
 import { onSnapshot } from 'firebase/firestore';
 
@@ -36,7 +37,7 @@ const ExpenseCategoryIcon = ({ category }) => {
                 borderRadius: "50%",
                 width: "36px",
                 height: "36px",
-                
+
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -80,7 +81,7 @@ const DashboardPage = ({ db, user, allExpenses, pools, categories }) => {
             alert(`New Badge Unlocked: ${badgeData.name}!`);
         }
     };
-    
+
     const formattedAnalysis = useMemo(() => {
         if (!analysis) return "";
         return analysis
@@ -130,7 +131,7 @@ const DashboardPage = ({ db, user, allExpenses, pools, categories }) => {
     }, [db, userId, currentPoolId, pools, appId]);
 
     const callGeminiAPI = async (systemPrompt, userPrompt) => {
-        const apiKey = import.meta.env.VITE_GEMINI_API_KEY;; 
+        const apiKey = import.meta.env.VITE_GEMINI_API_KEY;;
         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
         const payload = { contents: [{ parts: [{ text: userPrompt }] }], systemInstruction: { parts: [{ text: systemPrompt }] } };
         try {
@@ -138,8 +139,8 @@ const DashboardPage = ({ db, user, allExpenses, pools, categories }) => {
             if (!response.ok) throw new Error(`API Error: ${response.statusText}`);
             const result = await response.json();
             return result.candidates?.[0]?.content?.parts?.[0]?.text || "";
-        } catch (error) { 
-            console.error("Gemini API call failed:", error); 
+        } catch (error) {
+            console.error("Gemini API call failed:", error);
             return { error: "Failed to communicate with the AI. The API key may be missing or invalid." };
         }
     };
@@ -154,17 +155,17 @@ const DashboardPage = ({ db, user, allExpenses, pools, categories }) => {
             setShowLocationModal(true);
             return;
         }
-        if (expenses.length === 0) { 
-            setAnalysis("Not enough data for a coach to analyze."); 
-            return; 
+        if (expenses.length === 0) {
+            setAnalysis("Not enough data for a coach to analyze.");
+            return;
         }
-        setIsAnalyzing(true); 
-        setAnalysis(''); 
+        setIsAnalyzing(true);
+        setAnalysis('');
         setAnalysisError('');
 
         // Compute previous month
         const [year, month] = filterMonth.split("-");
-        const prevDate = new Date(year, parseInt(month) - 2, 1); 
+        const prevDate = new Date(year, parseInt(month) - 2, 1);
         const prevMonth = prevDate.toISOString().slice(0, 7);
 
         const prevExpenses = allExpenses.filter(
@@ -244,17 +245,17 @@ const DashboardPage = ({ db, user, allExpenses, pools, categories }) => {
         e.preventDefault();
         if (!validateForm() || !db || !user) return;
 
-        if(allExpenses.length === 0) {
+        if (allExpenses.length === 0) {
             await awardBadge('first-drop', { name: 'First Drop', unlockedAt: new Date().toISOString() });
         }
 
         const expenseHour = new Date(date).getHours();
-        if(expenseHour < 8) {
+        if (expenseHour < 8) {
             await awardBadge('early-bird', { name: 'Early Bird', unlockedAt: new Date().toISOString() });
         }
-        
-        const collectionPath = currentPoolId === 'personal' ? 
-            `artifacts/${appId}/users/${userId}/expenses` : 
+
+        const collectionPath = currentPoolId === 'personal' ?
+            `artifacts/${appId}/users/${userId}/expenses` :
             `artifacts/${appId}/public/data/pools/${currentPoolId}/expenses`;
         try {
             if (isSplitting && currentPoolId !== 'personal') {
@@ -296,8 +297,8 @@ const DashboardPage = ({ db, user, allExpenses, pools, categories }) => {
 
     const handleDelete = async (id) => {
         if (!db || !userId) return;
-        let docPath = currentPoolId === 'personal' ? 
-            `artifacts/${appId}/users/${userId}/expenses/${id}` : 
+        let docPath = currentPoolId === 'personal' ?
+            `artifacts/${appId}/users/${userId}/expenses/${id}` :
             `artifacts/${appId}/public/data/pools/${currentPoolId}/expenses/${id}`;
         try {
             await deleteDoc(doc(db, docPath));
@@ -322,39 +323,40 @@ const DashboardPage = ({ db, user, allExpenses, pools, categories }) => {
         window.scrollTo(0, 0);
     };
 
-    const resetForm = () => { 
-        setTitle(''); 
-        setAmount(''); 
-        setCategory('Food'); 
-        setDate(new Date().toISOString().slice(0, 16)); 
-        setEditingId(null); 
-        setShowForm(false); 
-        setError(''); 
-        setIsSplitting(false); 
-        setSplitMembers([]); 
+    const resetForm = () => {
+        setTitle('');
+        setAmount('');
+        setCategory('Food');
+        setDate(new Date().toISOString().slice(0, 16));
+        setEditingId(null);
+        setShowForm(false);
+        setError('');
+        setIsSplitting(false);
+        setSplitMembers([]);
     };
 
     const toggleForm = () => showForm ? resetForm() : setShowForm(true);
 
     const totalExpenses = useMemo(() => expenses.reduce((acc, exp) => acc + exp.amount, 0), [expenses]);
     const expensesByCategory = useMemo(() => {
-        const categoryMap = expenses.reduce((acc, exp) => { 
-            acc[exp.category] = (acc[exp.category] || 0) + exp.amount; 
-            return acc; 
+        const categoryMap = expenses.reduce((acc, exp) => {
+            acc[exp.category] = (acc[exp.category] || 0) + exp.amount;
+            return acc;
         }, {});
         return Object.entries(categoryMap).sort(([, a], [, b]) => b - a);
     }, [expenses]);
 
-    const currentContextName = useMemo(() => 
-        currentPoolId === 'personal' ? "Personal Expenses" : pools.find(p => p.id === currentPoolId)?.name || "Loading Pool...", 
+    const currentContextName = useMemo(() =>
+        currentPoolId === 'personal' ? "Personal Expenses" : pools.find(p => p.id === currentPoolId)?.name || "Loading Pool...",
         [currentPoolId, pools]
     );
 
     return (
         <>
+            <AdBanner />
             {showBudgetModal && <BudgetModal db={db} userId={userId} userSettings={userSettings} onClose={() => setShowBudgetModal(false)} />}
             {showLocationModal && <LocationModal db={db} userId={userId} onClose={(success) => { setShowLocationModal(false); if (success) handleGetAnalysis(); }} />}
-            
+
             {/* Context Switcher */}
             <div className="card context-switcher">
                 <div className="filter-group">
@@ -369,15 +371,15 @@ const DashboardPage = ({ db, user, allExpenses, pools, categories }) => {
                 </div>
                 <div className="filter-group">
                     <label htmlFor="context-select">Viewing Expenses For:</label>
-                    <select 
-                      id="context-select" 
-                      value={currentPoolId} 
-                      onChange={(e) => setCurrentPoolId(e.target.value)}
+                    <select
+                        id="context-select"
+                        value={currentPoolId}
+                        onChange={(e) => setCurrentPoolId(e.target.value)}
                     >
-                      <option value="personal">My Personal Expenses</option>
-                      {pools.map(pool => (
-                        <option key={pool.id} value={pool.id}>{pool.name}</option>
-                      ))}
+                        <option value="personal">My Personal Expenses</option>
+                        {pools.map(pool => (
+                            <option key={pool.id} value={pool.id}>{pool.name}</option>
+                        ))}
                     </select>
                 </div>
             </div>
@@ -434,7 +436,7 @@ const DashboardPage = ({ db, user, allExpenses, pools, categories }) => {
                     </form>
                 </div>
             )}
-            
+
             {/* Summary */}
             <div className="card">
                 <h2>Summary for {currentContextName} ({new Date(filterMonth).toLocaleString('default', { month: 'long', year: 'numeric' })})</h2>
@@ -463,7 +465,7 @@ const DashboardPage = ({ db, user, allExpenses, pools, categories }) => {
                     {analysisError && <p className="error-message">{analysisError}</p>}
                     {analysis && (
                         <div className="prose">
-                            <h3 style={{marginTop:'20px'}}>Your Personal Coaching Note</h3>
+                            <h3 style={{ marginTop: '20px' }}>Your Personal Coaching Note</h3>
                             <div dangerouslySetInnerHTML={{ __html: formattedAnalysis }} />
                         </div>
                     )}
