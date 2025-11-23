@@ -1,6 +1,7 @@
 import React from 'react';
 import { IconComponents } from './IconComponents';
 import Logo from '../assets/logo.png';
+import AdBanner from './AdBanner';
 
 const WelcomeScreen = ({ onNavigate }) => (
   <div id="welcome-screen" className="welcome-container">
@@ -80,7 +81,7 @@ const WelcomeScreen = ({ onNavigate }) => (
         </div>
       </div>
     </section>
-
+    <AdBanner />
     {/* Footer */}
     <footer className="footer">
       <p>&copy; 2025 FinADR. All rights reserved.</p>

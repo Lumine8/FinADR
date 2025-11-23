@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { doc, setDoc, onSnapshot, writeBatch, collection, getDocs } from 'firebase/firestore';
 import { IconComponents } from './IconComponents';
+import AdBanner from './AdBanner';
 
 const GoalsPage = ({ db, user, allExpenses }) => {
     const [userSettings, setUserSettings] = useState({ monthlyGoals: {}, achievements: [] });
@@ -75,7 +76,7 @@ const GoalsPage = ({ db, user, allExpenses }) => {
                     newBadgesUnlocked.push(data.name);
                 }
             };
-            
+
             awardBadge('goal-smasher', { name: 'Goal Smasher', unlockedAt: new Date().toISOString() });
 
             if (savings >= thisMonthGoal.goal * 2) {
@@ -85,7 +86,7 @@ const GoalsPage = ({ db, user, allExpenses }) => {
             if (savings - thisMonthGoal.goal < 100) {
                 awardBadge('barely-made-it', { name: 'Barely Made It', unlockedAt: new Date().toISOString() });
             }
-            
+
             const foodExpenses = expensesForMonth.filter(e => e.category === 'Food').reduce((sum, e) => sum + e.amount, 0);
             if (foodExpenses > totalExpenses * 0.5 && totalExpenses > 0) {
                 awardBadge('foodie', { name: 'Foodie', unlockedAt: new Date().toISOString() });
@@ -133,6 +134,7 @@ const GoalsPage = ({ db, user, allExpenses }) => {
                     )}
                 </div>
             </div>
+            <AdBanner />
         </div>
     );
 };
