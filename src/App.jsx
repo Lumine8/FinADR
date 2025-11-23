@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
 import { initializeApp } from 'firebase/app';
-import { 
-  getAuth, 
-  onAuthStateChanged, 
-  signOut} from 'firebase/auth';
-import { 
-    getFirestore, collection, onSnapshot, query, doc, 
-    setLogLevel, where, setDoc} from 'firebase/firestore';
+import {
+    getAuth,
+    onAuthStateChanged,
+    signOut
+} from 'firebase/auth';
+import {
+    getFirestore, collection, onSnapshot, query, doc,
+    setLogLevel, where, setDoc
+} from 'firebase/firestore';
 import { getMessaging, getToken, onMessage } from "firebase/messaging";
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
 
@@ -18,6 +20,8 @@ import AchievementsPage from './components/AchievementsPage';
 import PoolsPage from './components/PoolsPage';
 import GoalsPage from './components/GoalsPage';
 import ProfilePage from './components/ProfilePage';
+import Footer from "./components/Footer";
+
 import { IconComponents } from './components/IconComponents';
 
 import Logo from './assets/logo.png';
@@ -26,13 +30,13 @@ import './App.css';
 ChartJS.register(ArcElement, Tooltip, Legend);
 
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
+    apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+    appId: import.meta.env.VITE_FIREBASE_APP_ID,
+    measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
 const CATEGORIES = ['Food', 'Transport', 'Shopping', 'Bills', 'Entertainment', 'Other'];
@@ -232,6 +236,8 @@ export default function App() {
                 <main className="container">
                     {pageComponent}
                 </main>
+                <Footer />
+
             </div>
         );
     };
