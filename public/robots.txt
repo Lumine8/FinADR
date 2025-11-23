@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://finadr.vercel.app/sitemap.xml

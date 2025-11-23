@@ -1,0 +1,23 @@
+{
+  "short_name": "FinADR",
+  "name": "FinADR: Finance and Life Manager",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    },
+    {
+      "src": "/logo.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#ffffff",
+  "display": "standalone",
+  "scope": "/",
+  "theme_color": "#4F46E5",
+  "description": "FinADR helps you track expenses, goals, and finances easily.",
+  "orientation": "portrait-primary"
+}
