@@ -1,40 +1,93 @@
-import React, { useState } from 'react';
-import { doc, updateDoc } from 'firebase/firestore';
-import Modal from './Modal';
+import React, { useState } from "react";
+import {
+    doc,
+    getDoc,
+    setDoc,
+    updateDoc,
+    serverTimestamp,
+} from "firebase/firestore";
 
-const LocationModal = ({ db, userId, onClose }) => {
-    const [location, setLocation] = useState('');
-    const [error, setError] = useState('');
+export default function LocationModal({ db, userId, userSettings, onClose }) {
+    const [city, setCity] = useState(userSettings?.location || "");
+    const [error, setError] = useState("");
+    const [saving, setSaving] = useState(false);
+
     const appId = "1:608681523529:web:8f3bed536feada05224298";
 
-    const handleSaveLocation = async () => {
-        if (!location.trim()) {
-            setError("Please enter your city name.");
+    const saveLocation = async () => {
+        if (!city.trim()) {
+            setError("Location cannot be empty.");
             return;
         }
+
+        setSaving(true);
+        setError("");
+
         try {
-            const settingsRef = doc(db, `artifacts/${appId}/public/data/users`, userId);
-            await updateDoc(settingsRef, { location: location.trim() });
-            onClose(true);
+            const userRef = doc(db, `artifacts/${appId}/public/data/users/${userId}`);
+            const snap = await getDoc(userRef);
+
+            if (!snap.exists()) {
+                // Create full profile document (required by your Firestore rules)
+                await setDoc(userRef, {
+                    userId,
+                    displayName: userSettings?.displayName || "",
+                    avatarUrl: userSettings?.avatarUrl || "",
+                    currency: userSettings?.currency || "INR",
+                    location: city.trim(),
+                    updatedAt: serverTimestamp(),
+                });
+            } else {
+                // Update only allowed fields
+                await updateDoc(userRef, {
+                    location: city.trim(),
+                    updatedAt: serverTimestamp(),
+                });
+            }
+
+            onClose(); // close successfully
         } catch (err) {
-            console.error("Error saving location:", err);
+            console.error("Location save error:", err);
             setError("Could not save location.");
         }
+
+        setSaving(false);
     };
 
     return (
-        <Modal title="Set Your Location" onClose={() => onClose(false)}>
-            <div className="profile-modal-body">
-                <p>To give you personalized tips, we need to know your city.</p>
-                <label>City Name</label>
-                <input type="text" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="e.g., Vellore" />
+        <div className="modal-overlay">
+            <div className="modal-card">
+                <h2>Set Your Location</h2>
+
+                <p style={{ marginTop: "10px" }}>
+                    To give you personalized tips, we need to know your city.
+                </p>
+
+                <label className="modal-label">City Name</label>
+                <input
+                    type="text"
+                    placeholder="vellore"
+                    value={city}
+                    onChange={(e) => setCity(e.target.value)}
+                    className="modal-input"
+                />
+
                 {error && <p className="error-message">{error}</p>}
+
                 <div className="modal-actions">
-                    <button onClick={handleSaveLocation} className="btn-primary">Save & Continue</button>
+                    <button className="btn-secondary" onClick={onClose}>
+                        Cancel
+                    </button>
+
+                    <button
+                        className="btn-primary"
+                        onClick={saveLocation}
+                        disabled={saving}
+                    >
+                        {saving ? "Saving..." : "Save & Continue"}
+                    </button>
                 </div>
             </div>
-        </Modal>
+        </div>
     );
-};
-
-export default LocationModal;
+}
